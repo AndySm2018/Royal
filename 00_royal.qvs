@@ -1,4 +1,4 @@
-﻿SET VL.IncludePath = 'https://raw.githubusercontent.com/AndySm2018/Royal/master/';				// Путь к локальным файлам QVS
+﻿SET VL.IncludePath = 'https://raw.githubusercontent.com/AndySm2018/Royal/master';				// Путь к локальным файлам QVS
 //SET vQvdPath = 'lib://D/DataQlik/';				// Путь к файлам QVD
 //SET vQvdPath = 'lib://Z/Общая/QlikPojects/DataQlik/Transformed/';				// Путь к файлам QVD
 
