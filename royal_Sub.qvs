@@ -83,7 +83,7 @@ END SUB
 // **********************************
 // Загрузка переменных из файла
 // **********************************
-SUB LoadVariables (VarFName)
+SUB LoadVariables (VarFName, VarMode)
 	IF Len('$(VarFName)') = 0 THEN
     	TRACE ***************************************************************** 
     	       Имя файла не указано, или не заключено в одинарные кавычки 'file name' 
@@ -91,7 +91,7 @@ SUB LoadVariables (VarFName)
 		/* генерация ошибки скрипта путем вызова несуществующей процедуры */
 		CALL ThrowException('Ошибка загрузки файла с переменными');
     ENDIF
-	IF Lower(Left('$(VarFName)', 4)) <> 'lib:' THEN
+	IF Lower('$(VarMode)') <> 'web' and Lower(Left('$(VarFName)', 4)) <> 'lib:' THEN
 		LET VarFName = 'lib://D/' & '$(VarFName)';
 	ENDIF
 
@@ -110,6 +110,7 @@ SUB LoadVariables (VarFName)
 	LET vVar=;
 	LET i=;
 	LET VarFName =;
+	LET VarMode =;
 
 	DROP Tables Variables;
 END SUB

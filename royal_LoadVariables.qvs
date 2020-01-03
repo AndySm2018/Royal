@@ -2,6 +2,6 @@
        Загрузка переменных 
       *****************************************************************;
 
-CALL LoadVariables('$(VL.IncludePath)' & '/MasterDimensionsRoyal.csv');
+CALL LoadVariables('$(VL.IncludePath)' & '/MasterDimensionsRoyal.csv', 'web');
 
-CALL LoadVariables('$(VL.IncludePath)' & '/VariablesRoyal.csv');
+CALL LoadVariables('$(VL.IncludePath)' & '/VariablesRoyal.csv', 'web');
