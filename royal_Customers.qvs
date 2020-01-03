@@ -1,0 +1,186 @@
+﻿TRACE ***************************************************************** 
+       Организации и контрагенты 
+      *****************************************************************;
+
+[ТипКонтр]:
+MAPPING LOAD Distinct
+    _IDRRef as %ТК
+    ,_Description as ТК
+;
+SQL SELECT
+    _IDRRef // as Ссылка
+    ,_Description  //as Наименование
+FROM $(vBaseName).dbo._Reference97;
+
+[Собственные]:
+MAPPING LOAD * INLINE [
+a, b
+8BF8F0FEE287E03311E395869AD70B54, 1  
+80D39C5C8E4F724811E80D8163EA7323, 1
+80D29C5C8E4F724811E7F614AD8629BE, 1
+8C73E815AF6BB79111E3D4E5E37380B3, 1
+B68494DE801C3D4311E3A4F8E75AFE83, 1
+80D59C5C8E4F724811E98B8D44DC9FFD, 1
+];
+
+/*
+//8bf8f0fee287e03311e395869ad70b54 учредители
+//80d39c5c8e4f724811e80d8163ea7323 Учетные контрагенты
+//80d29c5c8e4f724811e7f614ad8629be Услуги
+//8c73e815af6bb79111e3d4e5e37380b3 Исполнительные д-ты
+//b68494de801c3d4311e3a4f8e75afe83 Займодавцы
+//80d59c5c8e4f724811e98b8d44dc9ffd Остальные контрагенты
+//    5      4    3    1      2
+//cfbc0e2d-f786-11de-b1bc-001eec49bf6b
+*/
+
+[ЮрФиз]:
+MAPPING LOAD
+	*
+INLINE
+[
+Юф1, Юф2
+9FE16425E8CCC8154BF0993C40AA38E8, Физ.лицо
+855F88B45ED681094248D71BF1535720, Юр.лицо
+];
+
+[Контрагенты]:
+LOAD 
+    AutoNumber(_IDRRef, 'Контрагент') as %Контрагент
+    ,AutoNumber(_ParentIDRRef, 'Родитель') as %Родитель
+    ,Floor(ApplyMap('Собственные', _ParentIDRRef, 0)) as Собственные
+    ,_Description as Контрагент
+    ,AutoNumber(_Fld706RRef, 'Менеджер') as %ОсновнойМенеджер
+    ,AutoNumber(_Fld686RRef, 'Менеджер') as %ВторойМенеджер
+    ,AutoNumber(_Fld687RRef, 'Контрагент') as %ГоловнойКонтрагент
+    ,ApplyMap('ТипКонтр', _Fld713RRef, 'Не указан') as [Тип контрагента]
+    ,Date(Floor(_Fld719 - $(vDateOffset))) as [Дата создания]
+    ,ApplyMap('ЮрФиз', _Fld715RRef, 'Не указан') as ЮрФизЛицо
+//    ,Floor(_Fld17522) as ЗапретОтгрузок
+//    ,Floor(_Fld17523) as ЛимитОтгрузки
+//    ,Floor(_Fld17524) as СуммаЛимитаОтгрузки  // , '0', ',', ' ')
+//    ,Floor(_Fld17525) as ДопустимаяПросрочка  // , '0', ',', ' ')
+//    ,Floor(_Fld17526) as КоличествоДнейДопустимойПросрочки  // , '0')
+//    ,Floor(_Fld17551) as КонтролироватьМаксимальноеКоличествоДнейОтсрочки
+//    ,Floor(_Fld17552) as МаксимальноеКоличествоДнейОтсрочки  // , '0')
+//    ,Floor(_Fld17553) as КонтролироватьМаксимальноеКоличествоДнейОтсрочкиИмпорт
+//    ,Floor(_Fld17554) as МаксимальноеКоличествоДнейОтсрочкиИмпорт  // , '0')
+;SQL SELECT 
+    _IDRRef
+    ,_ParentIDRRef
+    ,_Description
+    ,_Fld686RRef
+    ,_Fld687RRef
+    ,_Fld715RRef
+    ,_Fld706RRef
+    ,_Fld713RRef
+    ,_Fld719
+    // ,_Fld17522
+    // ,_Fld17523
+    // ,_Fld17524
+    // ,_Fld17525
+    // ,_Fld17526
+    // ,_Fld17551
+    // ,_Fld17552
+    // ,_Fld17553
+    // ,_Fld17554
+FROM $(vBaseName).dbo._Reference67
+WHERE _Folder<>0; // не каталог
+
+[ГоловнойКонтрагент]:
+LOAD Distinct
+     %ГоловнойКонтрагент
+RESIDENT Контрагенты
+WHERE Len(%ГоловнойКонтрагент) > 0;
+
+LEFT JOIN (ГоловнойКонтрагент)
+LOAD 
+     %Контрагент as %ГоловнойКонтрагент
+    ,Контрагент as [Головной контрагент]
+RESIDENT Контрагенты;
+
+[Организации]:
+LEFT KEEP (ОрганизацияОтбор)
+LOAD
+    Autonumber(_IDRRef, 'Организация') as %Организация
+    ,_IDRRef as %ОрганизацияОтбор
+    ,_Description as Организация
+;SQL SELECT
+    _IDRRef // as Ссылка
+    ,_Description // as Наименование
+FROM $(vBaseName).dbo._Reference74
+WHERE _Marked=0;
+
+DROP Field %ОрганизацияОтбор from Организации;
+
+DROP Field %Родитель from Контрагенты;
+
+// [ТипРеализации]:
+// MAPPING LOAD * Inline [
+// %ТипДогов, %ТипРеализации
+// A8624E81C933F08F419B05A49ACDC07E, 'Да'
+// ];
+
+
+[Предоплата]:
+MAPPING LOAD
+	*
+INLINE
+[
+Пр1, Пр2
+00, Нет
+01, Да
+];
+
+/*
+[Предоплата]:
+MAPPING LOAD
+    _IDRRef
+    ,_Fld7259
+;SQL SELECT
+    _IDRRef
+    ,_Fld7259
+FROM $(vBaseName).dbo._Reference7253;
+*/
+
+
+[ВидОплаты]:
+MAPPING LOAD
+	*
+INLINE
+[
+Во1, Во2
+B592254FF9B2902146B3EF40F6719100, Безнал
+AFFE702A40B56F754E45E8DF717806D0, Нал
+];
+/*
+[ВидОплаты]:
+MAPPING LOAD
+    _IDRRef
+    ,_Fld7258RRef
+;SQL SELECT
+    _IDRRef
+    ,_Fld7258RRef
+FROM $(vBaseName).dbo._Reference7253;
+*/
+
+[Договора]:
+LEFT KEEP (ОрганизацияОтбор)
+LOAD Distinct
+    AutoNumber(_IDRRef, 'ДоговорКонтрагента')  as %Договор
+    ,_Fld263RRef as %ОрганизацияОтбор
+    ,_Description as Договор
+    ,ApplyMap('Предоплата', _Fld7283RRef, 'Нет') as Предоплата
+    ,ApplyMap('ВидОплаты', _Fld7283RRef, Null()) as ВидОплаты
+//    ,_Fld821RRef as %ВидДоговора
+//    ,ApplyMap('ТипРеализации', _Fld849RRef, 'Нет') as ТоварНаРеализации
+;SQL SELECT
+    _IDRRef
+    ,_Description
+    ,_Fld263RRef
+    ,_Fld7283RRef
+//    ,_Fld849RRef
+//    ,_Fld821RRef
+FROM $(vBaseName).dbo._Reference45;
+
+DROP Fields %ОрганизацияОтбор FROM Договора;

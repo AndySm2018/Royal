@@ -1,0 +1,7 @@
+﻿TRACE ***************************************************************** 
+       Загрузка переменных 
+      *****************************************************************;
+
+CALL LoadVariables('$(VL.IncludePath)' & '/MasterDimensionsRoyal.csv');
+
+CALL LoadVariables('$(VL.IncludePath)' & '/VariablesRoyal.csv');

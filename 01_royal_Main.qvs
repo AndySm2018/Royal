@@ -1,0 +1,111 @@
+﻿SET ThousandSep=' ';
+SET DecimalSep=',';
+SET MoneyThousandSep=' ';
+SET MoneyDecimalSep=',';
+SET MoneyFormat='# ##0,00 ₽;-# ##0,00 ₽';
+SET TimeFormat='hh:mm:ss';
+SET DateFormat='DD.MM.YYYY';
+SET TimestampFormat='DD.MM.YYYY hh:mm:ss[.fff]';
+SET MonthNames='Янв;Фев;Мар;Апр;Май;Июн;Июл;Авг;Сен;Окт;Ноя;Дек';
+SET DayNames='Пн;Вт;Ср;Чт;Пт;Сб;Вс';
+SET LongMonthNames='Январь;Февраль;Март;Апрель;Май;Июнь;Июль;Август;Сентябрь;Октябрь;Ноябрь;Декабрь';
+SET LongDayNames='Понедельник;Вторник;Среда;Четверг;Пятница;Суббота;Воскресенье';
+SET FirstWeekDay=0;
+SET BrokenWeeks=1;
+SET ReferenceDay=0;
+SET FirstMonthOfYear=1;
+SET CollationLocale='ru-RU';
+SET CreateSearchIndexOnReload=1;
+SET NumericalAbbreviation='3:k;6:M;9:G;12:T;15:P;18:E;21:Z;24:Y;-3:m;-6:μ;-9:n;-12:p;-15:f;-18:a;-21:z;-24:y';
+SET vDateOffset = 730485;							// Для расчета даты полученной из SQL
+LET vBeginTime = Floor('01.04.2017');				// Начальная дата в базе
+LET vEndTime = Floor(Today(1));
+LET vCurrentYear = Floor(Year(Today(1)));
+LET vCY = Floor(YearStart(Today(1)));
+LET vEpsilon = Pow(2,-27);
+
+LET vUser = Trim(ComputerName()); //Определение пользователя
+
+//SET vEnd="4017-01-01";
+LET vEnd = Date(Now(1) + 730485, 'YYYY-MM-DD');
+SET vT = "8D349C45C7F611A1459BC5DE81B94757";		
+
+SET vQlikBlue = RGB(68,119,170);
+SET vQlikRed = RGB(204,102,119);
+
+SET vBaseName = 'UTSUPR';							// Имя базы
+SET HidePrefix = '%';
+
+[ОрганизацияОтбор]:
+LOAD * Inline [
+%ОрганизацияОтбор, ОрганизацияОтбор
+9C7094DE801C3D4311E392627E712468, 'Роял'
+];
+
+//    5      4    3    1      2
+//cfbc0e2d-f786-11de-b1bc-001eec49bf6b
+
+
+[ДоговораОтбор]:
+LEFT KEEP (ОрганизацияОтбор)
+LOAD Distinct
+    _IDRRef as %ДоговорОтбор
+    ,_Fld263RRef as %ОрганизацияОтбор
+    ,_Fld508RRef as %ВидДоговора
+WHERE
+    _Fld508RRef = '9363C6F0A10557BF4822A55DB4862286' Or
+    _Fld508RRef = '8217B777C1C509D34F4DD13D2B51B4FE';
+;SQL SELECT
+    _IDRRef
+    ,_Fld263RRef
+    ,_Fld508RRef
+FROM $(vBaseName).dbo._Reference45;
+
+DROP Field %ОрганизацияОтбор from ДоговораОтбор;
+/*
+//9363C6F0A10557BF4822A55DB4862286 - с покупателем
+//8217B777C1C509D34F4DD13D2B51B4FE - с коммисионером
+//95DB9A602E142ED645D7CCF13094909F - с поставщиком
+
+[ДоговораРеал]:
+LEFT KEEP (ОрганизацияОтбор)
+LOAD Distinct
+    _Fld14082RRef as %ДогРеалОтбор
+    ,_Fld14068RRef as %ОрганизацияОтбор
+;SQL SELECT
+    _Fld14082RRef
+    ,_Fld14068RRef
+FROM $(vBaseName).dbo._Document264;
+
+CONCATENATE (ДоговораРеал)
+LOAD Distinct
+    _Fld14082RRef as %ДогРеалОтбор
+    ,_Fld14068RRef as %ОрганизацияОтбор
+;SQL SELECT
+    _Fld14082RRef
+    ,_Fld14068RRef
+FROM $(vBaseName).dbo._Document14513;
+
+CONCATENATE (ДоговораРеал)
+LOAD Distinct
+    _Fld13125RRef as %ДогРеалОтбор
+    ,_Fld13118RRef as %ОрганизацияОтбор
+;SQL SELECT
+    _Fld13125RRef
+    ,_Fld13118RRef
+FROM $(vBaseName).dbo._Document13117;
+
+DROP Field %ОрганизацияОтбор from ДоговораРеал;
+
+[ДоговораОтбор]:
+LEFT KEEP (ДоговораРеал)
+LOAD Distinct
+    %ДоговорОтбор as %ДогРеалОтбор
+    ,%ДоговорОтбор
+    ,%ВидДоговора
+RESIDENT ДоговораОтборВрем;
+
+DROP Field %ДогРеалОтбор from ДоговораОтбор;
+
+DROP Tables ДоговораРеал, ДоговораОтборВрем;
+*/

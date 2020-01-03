@@ -1,0 +1,265 @@
+﻿TRACE ***************************************************************** 
+       Заказы 
+      *****************************************************************;
+
+LET vLoad = Time(Now(1));
+
+[СерияЗаказа]:
+MAPPING LOAD * INLINE [
+X,Y
+00000000000000000000000000000000, 0
+];
+
+//-----------------------------------------------------------------------------------------------------------------------
+//  Отбираем только заказы, корректировки заказов в большую сторону, комплектации, укомплектации, разукомплектации 
+//-----------------------------------------------------------------------------------------------------------------------
+LET vQVD = '$(vQvdPath)' & 'Заказы#_Заказы.qvd';
+CALL GetQvdDate('$(vQvdPath)', 'Заказы#_Заказы.qvd');
+
+LET vFromWhere = If(GL_vQvdExist = 1,
+                'FROM $(vBaseName).dbo._AccumRg9676 WHERE _Active = 1 and _Period >= ''$(GL_vQvdDate)''',
+                'FROM $(vBaseName).dbo._AccumRg9676 WHERE _Active = 1');
+
+    //WHERE _Fld9678_RTRef = '000000B1'; 
+    //000000B1 - Заказ покупателя
+    //000000CD - Корректировка заказа покупателя
+    //000000B5 - Закрытие заказа покупателя
+    //8AD100248149A06A11DEF6D713C3095B - Главный склад
+    //8AD100248149A06A11DEF6D7ACEEE371 - Склад  "КС"
+    //80EB3497F6007BC811E83CADC7595C7F - Склад  "Мультик"
+    //BEA2001FC674582711E2D42A26400FD2 - Уцененный товар Дис
+    //80DA3497F6007BC811E74C18EA0D11A9 - Уцененный товар "КС"
+    //80FF3497F6007BC811E939A03A406AE1 - Уцененный товар "МК"
+    //8AD100248149A06A11DEF6F1DE1F8360 - Демостенд Дис
+    //993E001FC674582711E2905ED4AC062E - Демо-стенд КС
+    //80E33497F6007BC811E7DE60E5B4257D - Демо-стенд МК
+    //8AD100248149A06A11DEF6D7ACEEE3B1 - Сборочное производство
+    //8AD100248149A06A11DEF6D7ACEEE36F - Склад сборки ПК
+
+[ЗаказыВрем]:
+LEFT KEEP (Cклады)
+LOAD
+    Floor(_Period - $(vDateOffset)) as %ДатаЗаказа
+    ,_RecorderTRef as Регистратор_СсылкаТип
+    ,_RecorderRRef as Регистратор_Ссылка
+    ,AutoNumber(_Fld9677RRef, 'Склад') as %СкладЗаказа
+    ,_Fld9677RRef as %СкладОтбор
+    ,AutoNumber(_Fld9678_RRRef, 'ЗаказПокупателя') as %Заказ
+    ,AutoNumber(_Fld9679RRef, 'Номенклатура') as %НоменклатураЗаказа
+    ,AutoNumber(_Fld9680RRef, 'Характеристика') as %ХарактеристикаЗаказа
+    ,AutoNumber(_Fld9681RRef, 'Серия') as %СерияЗаказа
+    ,Floor(ApplyMap('СерияЗаказа', _Fld9681RRef, 1)) as [F_Врезерве]
+    ,Num(_Fld9684) as Заказано
+//    ,ApplyMap('ЗакрЗаказа', _RecorderTRef, 1) * Floor(_Fld9684) as Количество
+WHERE ((_Fld9678_RTRef = '000000B1' and (_RecorderTRef='000000B1' or _RecorderTRef='000000CD' or _RecorderTRef = '0000304B' or _RecorderTRef = '000032C2'))
+or (_Fld9678_RTRef = '000000B1' and _RecorderTRef='000000C9' and _Fld9684 > 0))
+and (_Fld9677RRef = '8AD100248149A06A11DEF6D713C3095B' or _Fld9677RRef = '8AD100248149A06A11DEF6D7ACEEE371' or _Fld9677RRef = 'BEA2001FC674582711E2D42A26400FD2'
+or _Fld9677RRef = '8AD100248149A06A11DEF6F1DE1F8360' or _Fld9677RRef = '8AD100248149A06A11DEF6D7ACEEE36F' or _Fld9677RRef = '993E001FC674582711E2905ED4AC062E'
+or _Fld9677RRef = '8AD100248149A06A11DEF6D7ACEEE3B1' or _Fld9677RRef = '80EB3497F6007BC811E83CADC7595C7F' or _Fld9677RRef = '80DA3497F6007BC811E74C18EA0D11A9'
+or _Fld9677RRef = '80E33497F6007BC811E7DE60E5B4257D' or _Fld9677RRef = '80FF3497F6007BC811E939A03A406AE1') and _Fld9684 > 0;
+;SQL SELECT
+    _Period //as Период
+    ,_RecorderTRef //as Регистратор_СсылкаТип
+    ,_RecorderRRef //as Регистратор_Ссылка
+    ,_Fld9677RRef //as Склад_Ссылка
+    ,_Fld9678_RTRef //as ДокументРезерва_СсылкаТип
+    ,_Fld9678_RRRef //as ДокументРезерва_Ссылка
+    ,_Fld9679RRef //as Номенклатура_Ссылка
+    ,_Fld9680RRef //as ХарактеристикаНоменклатуры_Ссылка
+    ,_Fld9681RRef //as СерияНоменклатуры_Ссылка
+    ,_Fld9684 //as Количество
+    ,_Active
+FROM $(vBaseName).dbo._AccumRg9676 WHERE _Active = 1;
+
+DROP Field %СкладОтбор from ЗаказыВрем;
+
+Call bjoin('ЗаказыВрем');
+LEFT JOIN (ЗаказыВрем)
+LOAD
+    %ЗаказПокупателяВременный as %Заказ
+    ,НомерЗаказаРегВременный as НомерЗаказа
+    ,%КонтрагентЗаказаВременный as %КонтрагентЗаказа
+    ,%ОтветственныйРегВременный as %Ответственный //Резерва
+    ,ВидЗаказаРегВременный as [Вид заказа]    
+    ,[Резерв c ценамиВременный] as [Резерв c ценами]
+RESIDENT ДанныеЗаказа;
+Call ajoin('ЗаказыВрем', 'Добавляем НомерЗаказа КонтрагентЗаказа Ответственный Вид заказа СуммаЗаказа');
+DROP Table ДанныеЗаказа;
+
+LET vQVD = '$(vQvdPath)' & 'Заказы#_Заказы.qvd';
+CALL GetQvdDate('$(vQvdPath)', 'Заказы#_Заказы.qvd');
+IF GL_vQvdExist = 1 THEN
+    [PC]:
+    LOAD Distinct
+        AutoNumber(_Fld9124RRef, 'ЗаказПокупателя') as %ЗаказPC
+        ,AutoNumber(_Fld9118RRef, 'Номенклатура') as %НоменклатураЗаказаPC
+        ,AutoNumber(_Fld9119RRef, 'Характеристика') as %ХарактеристикаЗаказаPC
+        ,AutoNumber(_Fld9120RRef, 'Серия') as %СерияЗаказаPC
+        ,Floor(_Fld9128) as ЗаказаноPC
+        ,1 as PC //PC - добавляем признак, что номенклатура ушла в комплектацию
+    WHERE _RecorderTRef = '000000C9';
+    ;SQL SELECT
+        _Period
+        ,_RecorderTRef //as Регистратор_СсылкаТип
+        ,_Fld9118RRef //as Номенклатура_Ссылка
+        ,_Fld9119RRef //as ХарактеристикаНоменклатуры_Ссылка
+        ,_Fld9120RRef //as СерияНоменклатуры_Ссылка
+        ,_Fld9124RRef //as ЗаказПокупателя_Ссылка
+        ,_Fld9128 //as Количество
+        ,_Active
+    FROM $(vBaseName).dbo._AccumRg9116
+    WHERE _Active = 1 and _Period >= '$(GL_vQvdDate)';
+ELSE
+    [PC]:
+    LOAD Distinct
+        AutoNumber(_Fld9124RRef, 'ЗаказПокупателя') as %ЗаказPC
+        ,AutoNumber(_Fld9118RRef, 'Номенклатура') as %НоменклатураЗаказаPC
+        ,AutoNumber(_Fld9119RRef, 'Характеристика') as %ХарактеристикаЗаказаPC
+        ,AutoNumber(_Fld9120RRef, 'Серия') as %СерияЗаказаPC
+        ,Floor(_Fld9128) as ЗаказаноPC
+        ,1 as PC //PC - добавляем признак, что номенклатура ушла в комплектацию
+    WHERE _RecorderTRef = '000000C9';
+    ;SQL SELECT
+        _RecorderTRef //as Регистратор_СсылкаТип
+        ,_Fld9118RRef //as Номенклатура_Ссылка
+        ,_Fld9119RRef //as ХарактеристикаНоменклатуры_Ссылка
+        ,_Fld9120RRef //as СерияНоменклатуры_Ссылка
+        ,_Fld9124RRef //as ЗаказПокупателя_Ссылка
+        ,_Fld9128 //as Количество
+        ,_Active
+    FROM $(vBaseName).dbo._AccumRg9116
+    WHERE _Active = 1;
+ENDIF
+
+Call bjoin('ЗаказыВрем');
+LEFT JOIN (ЗаказыВрем)
+LOAD
+    %ЗаказPC as %Заказ
+    ,%НоменклатураЗаказаPC as %НоменклатураЗаказа
+    ,%ХарактеристикаЗаказаPC as %ХарактеристикаЗаказа
+    ,%СерияЗаказаPC as %СерияЗаказа
+    ,ЗаказаноPC as Заказано
+    ,PC //PC - добавляем признак, что номенклатура ушла в комплектацию
+RESIDENT PC;
+Call ajoin('ЗаказыВрем', 'Добавляем PC');
+DROP Table PC;
+
+LET vQVD = '$(vQvdPath)' & 'Заказы#_Заказы.qvd';
+CALL GetQvdDate('$(vQvdPath)', 'Заказы#_Заказы.qvd');
+IF GL_vQvdExist = 1 THEN
+    [CMPL]:
+    LOAD Distinct
+        AutoNumber(_Fld9678_RRRef, 'ЗаказПокупателя') as %ЗаказCMPL
+        ,AutoNumber(_Fld9679RRef, 'Номенклатура') as %НоменклатураЗаказаCMPL
+        ,AutoNumber(_Fld9680RRef, 'Характеристика') as %ХарактеристикаЗаказаCMPL
+        ,AutoNumber(_Fld9681RRef, 'Серия') as %СерияЗаказаCMPL
+        ,Floor(_Fld9684) as ЗаказаноCMPL
+        ,1 as CMPL //CMPL - добавляем признак, что номенклатура ушла в укомплектацию или разукомплектацию
+    WHERE _RecorderTRef = '0000304B' or _RecorderTRef = '000032C2';
+    ;SQL SELECT
+        _Period
+        ,_RecorderTRef //as Регистратор_СсылкаТип
+        ,_Fld9678_RRRef //as ЗаказПокупателя_Ссылка
+        ,_Fld9679RRef //as Номенклатура_Ссылка
+        ,_Fld9680RRef //as ХарактеристикаНоменклатуры_Ссылка
+        ,_Fld9681RRef //as СерияНоменклатуры_Ссылка
+        ,_Fld9684 //as Количество
+        ,_Active
+    FROM $(vBaseName).dbo._AccumRg9676
+    WHERE _Active = 1 and _Period >= '$(GL_vQvdDate)';
+ELSE
+    [CMPL]:
+    LOAD Distinct
+        AutoNumber(_Fld9678_RRRef, 'ЗаказПокупателя') as %ЗаказCMPL
+        ,AutoNumber(_Fld9679RRef, 'Номенклатура') as %НоменклатураЗаказаCMPL
+        ,AutoNumber(_Fld9680RRef, 'Характеристика') as %ХарактеристикаЗаказаCMPL
+        ,AutoNumber(_Fld9681RRef, 'Серия') as %СерияЗаказаCMPL
+        ,Floor(_Fld9684) as ЗаказаноCMPL
+        ,1 as CMPL //CMPL - добавляем признак, что номенклатура ушла в укомплектацию или разукомплектацию
+    WHERE _RecorderTRef = '0000304B' or _RecorderTRef = '000032C2';
+    ;SQL SELECT
+        _RecorderTRef //as Регистратор_СсылкаТип
+        ,_Fld9678_RRRef //as ЗаказПокупателя_Ссылка
+        ,_Fld9679RRef //as Номенклатура_Ссылка
+        ,_Fld9680RRef //as ХарактеристикаНоменклатуры_Ссылка
+        ,_Fld9681RRef //as СерияНоменклатуры_Ссылка
+        ,_Fld9684 //as Количество
+        ,_Active
+    FROM $(vBaseName).dbo._AccumRg9676
+    WHERE _Active = 1;
+ENDIF
+
+Call bjoin('ЗаказыВрем');
+LEFT JOIN (ЗаказыВрем) 
+LOAD
+    %ЗаказCMPL as %Заказ
+    ,%НоменклатураЗаказаCMPL as %НоменклатураЗаказа
+    ,%ХарактеристикаЗаказаCMPL as %ХарактеристикаЗаказа
+    ,%СерияЗаказаCMPL as %СерияЗаказа
+    ,ЗаказаноCMPL as Заказано
+    ,CMPL //CMPL - добавляем признак, что номенклатура ушла в укомплектацию или разукомплектацию
+RESIDENT CMPL;
+Call ajoin('ЗаказыВрем', 'Добавляем CMPL');
+DROP Table CMPL;
+
+[Заказы]:
+NOCONCATENATE LOAD
+    %ДатаЗаказа
+    ,[Регистратор_Ссылка]
+    ,[Регистратор_СсылкаТип]
+    ,%Заказ
+    ,НомерЗаказа
+    ,%КонтрагентЗаказа
+    ,%Ответственный
+    ,%СкладЗаказа
+    ,%НоменклатураЗаказа
+    ,%ХарактеристикаЗаказа
+    ,%СерияЗаказа
+    ,Заказано
+    ,[F_Врезерве]
+    ,[Вид заказа]
+    ,[Резерв c ценами]
+RESIDENT ЗаказыВрем
+WHERE PC <> 1 and CMPL <> 1; //Только ставшие в резерв и не ушедшие в комплектацию, укомплектацию, разукомплектацию.
+
+DROP Table ЗаказыВрем;
+
+Call bjoin('Заказы');
+LEFT JOIN(Заказы)
+LOAD
+    Autonumber(_IDRRef, 'Менеджер') as %Ответственный //Резерва
+    ,_Description as Ответственный //Резерва
+;SQL SELECT
+    _IDRRef
+    ,_Description
+FROM $(vBaseName).dbo._Reference93; 
+Call ajoin('Заказы', 'Добавляем Ответственный');
+
+DROP Fields [Регистратор_Ссылка], [Регистратор_СсылкаТип] from [Заказы];
+
+LET vQVD = '$(vQvdPath)' & 'Заказы#_Заказы.qvd';
+CALL GetQvdDate('$(vQvdPath)', 'Заказы#_Заказы.qvd');
+IF GL_vQvdExist = 1 THEN
+    CONCATENATE(Заказы)
+    LOAD
+        %ДатаЗаказа
+        ,AutoNumber(%Заказ, 'ЗаказПокупателя') as %Заказ
+        ,НомерЗаказа
+        ,AutoNumber(%СкладЗаказа, 'Склад') as %СкладЗаказа
+        ,AutoNumber(%НоменклатураЗаказа, 'Номенклатура') as %НоменклатураЗаказа
+        ,AutoNumber(%ХарактеристикаЗаказа, 'Характеристика') as %ХарактеристикаЗаказа
+        ,AutoNumber(%СерияЗаказа, 'Серия') as %СерияЗаказа
+        ,AutoNumber(%КонтрагентЗаказа, 'Контрагент') as %КонтрагентЗаказа
+        ,Autonumber(%Ответственный, 'Менеджер') as %Ответственный
+        ,Заказано
+        ,[F_Врезерве]
+        ,[Вид заказа]
+        ,[Резерв c ценами]
+        ,Ответственный
+    FROM [$(vQVD)](qvd);
+ENDIF
+
+LET vLoad = Time(Time(Now(1)) - vLoad);
+TRACE
+Время загрузки: $(vLoad)
+;

@@ -1,0 +1,160 @@
+﻿TRACE ***************************************************************** 
+       Календари
+      *****************************************************************;
+
+LET vLoad = Time(Now(1));
+
+[CalendarTag]:
+MAPPING LOAD * INLINE [
+d,t
+Год, $axis
+ГодКвартал, $yearquarter
+Месяц, $month
+МесяцГод, $axis
+НеделяГод, $weekyear
+Неделя, $weeknumber
+Дата, $axis
+День недели, $weekday
+День, $day
+ГодПрогноза, $axis
+МесяцПрогноза, $month
+МесяцГодПрогноза, $axis
+ДатаПрогноза, $axis
+];
+
+[CalendarTag2]:
+MAPPING LOAD * INLINE [
+d2,t2
+Год, $year
+ГодКвартал, $qualified
+Месяц, $cyclic
+МесяцГод, $monthyear
+НеделяГод, $qualified
+Неделя, $cyclic
+Дата, $date
+День недели, $cyclic
+ГодПрогноза, $year
+МесяцПрогноза, $cyclic
+МесяцГодПрогноза, $monthyear
+ДатаПрогноза, $date
+];
+
+[CalendarTag3]:
+MAPPING LOAD * INLINE [
+d3,t3
+МесяцГод, $qualified
+Дата, $qualified
+МесяцГодПрогноза, $qualified
+ДатаПрогноза, $qualified
+];
+
+// Формирование последовательности дат в диапазоне
+[TempCalendar]:
+LOAD
+    Floor($(vBeginTime) + rowno() - 1) as TempDate
+AUTOGENERATE $(vEndTime) - $(vBeginTime) + 1;
+
+[Календарь]:
+LOAD         
+    Floor([TempDate]) as %Дата
+    ,Dual(Year(TempDate), YearStart(TempDate)) as Год
+    ,Dual(Year(TempDate) & '-К' & Num(Ceil(Num(Month(TempDate)) / 3)),QuarterStart(TempDate)) as ГодКвартал
+    ,Month(TempDate) as Месяц
+    ,Dual(Month(TempDate) & '-' & Year(TempDate), monthstart(TempDate)) as МесяцГод
+    ,Dual('Н' & Num(Week(TempDate), 00) & '-' & Year(TempDate), weekstart(TempDate)) as НеделяГод
+    ,Dual('Н' & Num(Week(TempDate), 00), Num(Week(TempDate), 00)) as Неделя
+    ,Date(Floor(TempDate)) as Дата
+    ,WeekDay(TempDate) as [День недели]
+    ,Day(TempDate) as День
+    ,Num(1) as FDStart
+    ,Num(1) as FDEnd
+    ,Floor(If(TempDate = Floor(WeekStart(TempDate)), 1, 0)) as FWStart
+    ,Floor(If(TempDate = Floor(WeekEnd(TempDate)) or TempDate = $(vEndTime), 1, 0)) as FWEnd
+    ,Floor(If(TempDate = Floor(MonthStart(TempDate)), 1, 0)) as FMStart
+    ,Floor(If(TempDate = Floor(MonthEnd(TempDate)) or TempDate = $(vEndTime), 1, 0)) as FMEnd
+    ,Floor(If(TempDate = Floor(YearStart(TempDate)), 1, 0)) as FYStart
+    ,Floor(If(TempDate = Floor(YearEnd(TempDate)) or TempDate = $(vEndTime), 1, 0)) as FYEnd
+    ,Floor(InYear(TempDate, $(vCY), 0) * -1) as FCY
+    ,Floor(InYear(TempDate, $(vCY), -1) * -1) as FLY
+RESIDENT TempCalendar;
+//DROP Table TempCalendar;
+// Календарь для загрузки управленческих курсов
+[Календарь_Курс]:
+LOAD         
+    Floor([TempDate]) as %ДатаКурса
+RESIDENT TempCalendar;
+DROP Table TempCalendar;
+
+[Calendar]: 
+DECLARE FIELD DEFINITION Tagged ('$date')
+FIELDS
+    Dual(Year($1), YearStart($1)) as Год Tagged ('$axis', '$year', '$hidden'),
+    Dual(Year($1)&'-К'&Num(Ceil(Num(Month($1))/3)),QuarterStart($1)) as ГодКвартал Tagged ('$axis', '$yearquarter', '$hidden'),
+    Month($1) as Месяц Tagged ('$month', '$cyclic', '$hidden'),
+    Dual(Month($1) & '-' & Year($1), monthstart($1)) as МесяцГод Tagged ('$axis', '$yearmonth', '$hidden'),
+    Dual('Н'&Num(Week($1),00)&'-'&Year($1), weekstart($1)) as НеделяГод Tagged ('$axis', '$yearweek', '$hidden'),
+    Dual('Н'&Num(Week($1),00), Num(Week($1),00)) as Неделя Tagged ('$weeknumber', '$cyclic', '$hidden'),
+    Dual(Day($1), Date(Floor($1))) as Дата Tagged ('$axis', '$date', '$qualified', '$hidden'),
+    WeekDay($1) as [День недели] Tagged ('$weekday', '$cyclic', '$hidden'),
+    Day($1) as День  Tagged ('$day', '$hidden');
+
+DERIVE FIELDS FROM FIELDS [Дата] USING [Calendar];
+
+// Формирование последовательности дат в диапазоне для прогнозного календаря
+[TempCalendar]:
+LOAD
+    Floor($(vBeginTime) + rowno() - 1) as TempDate
+AUTOGENERATE AddMonths($(vEndTime), 12, 1) - $(vBeginTime) + 1;
+
+JOIN (TempCalendar)
+    LOAD Date(Floor(TempDate)) as ДатаПрогноза
+RESIDENT TempCalendar;
+
+[Календарьtmp]:
+LOAD         
+    Floor([TempDate]) as %Дата
+    ,ДатаПрогноза
+    ,Num(If(Floor([TempDate]) <= [ДатаПрогноза], 1, 0)) as _FlagSumAll
+    ,Num(If(Floor([TempDate]) = [ДатаПрогноза], 1, 0)) as _FlagCurrentDate
+    ,Num(If(Year(Floor([TempDate])) = Year([ДатаПрогноза]), 1, 0)) as _FlagSumYear
+    ,Num(If(Month(Floor([TempDate])) = Month([ДатаПрогноза]), 1, 0)) as _FlagSumMonth
+    ,Num(If(MonthName(Floor([TempDate])) = MonthName([ДатаПрогноза]), 1, 0)) as _FlagSumMonthYear
+    ,Dual(Year(TempDate), YearStart(TempDate)) as ГодПрогноза
+    ,Month(TempDate) as МесяцПрогноза
+    ,Dual(Month(TempDate) & '-' & Year(TempDate), monthstart(TempDate)) as МесяцГодПрогноза
+RESIDENT TempCalendar;
+
+DROP Table TempCalendar;
+
+[КалендарьПрогноза]:
+NoConcatenate
+LOAD
+    *
+RESIDENT Календарьtmp
+WHERE RangeMax(_FlagSumAll, _FlagCurrentDate) = 1;
+
+DROP TABLE Календарьtmp;
+
+[Прогноз]: 
+DECLARE FIELD DEFINITION Tagged ('$date')
+FIELDS
+    Dual(Year($1), YearStart($1)) as ГодПрогноза Tagged ('$axis', '$year', '$hidden'),
+    Dual(Year($1)&'-К'&Num(Ceil(Num(Month($1))/3)),QuarterStart($1)) as ГодКварталПрогноза Tagged ('$axis', '$yearquarter', '$hidden'),
+    Month($1) as Месяц Tagged ('$month', '$cyclic', '$hidden'),
+    Dual(Month($1) & '-' & Year($1), monthstart($1)) as МесяцГодПрогноза Tagged ('$axis', '$yearmonth', '$hidden'),
+    Dual('Н'&Num(Week($1),00)&'-'&Year($1), weekstart($1)) as НеделяГодПрогноза Tagged ('$axis', '$yearweek', '$hidden'),
+    Dual('Н'&Num(Week($1),00), Num(Week($1),00)) as НеделяПрогноза Tagged ('$weeknumber', '$cyclic', '$hidden'),
+    Dual(Day($1), Date(Floor($1))) as ДатаПрогноза Tagged ('$axis', '$date', '$qualified', '$hidden'),
+    WeekDay($1) as ДеньНеделиПрогноза Tagged ('$weekday', '$cyclic', '$hidden'),
+    Day($1) as ДеньПрогноза  Tagged ('$day', '$hidden');
+
+DERIVE FIELDS FROM FIELDS [ДатаПрогноза] USING [Прогноз];
+
+TAG Fields using CalendarTag;
+TAG Fields using CalendarTag2;
+TAG Fields using CalendarTag3;
+
+LET vLoad = Time(Time(Now(1)) - vLoad);
+TRACE
+Время загрузки: $(vLoad)
+;

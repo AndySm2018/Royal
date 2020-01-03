@@ -1,0 +1,115 @@
+﻿TRACE ***************************************************************** 
+       Процедуры
+      *****************************************************************;
+
+SUB bjoin (bTabName)
+	/* Проверка корректности присоединения — первоначальное количество строк в таблице */
+	LET vTable_InitialNoOfRows = NoOfRows(bTabName);
+//	TRACE $(bTabName). Начальное количество: $(vTable_InitialNoOfRows);
+END SUB
+
+SUB ajoin (aTabName, TextError)
+	/* Проверка корректности присоединения — сверка с первоначальным значением */
+	LET vTable_CurrentNoOfRows = NoOfRows(aTabName);
+	IF vTable_InitialNoOfRows <> vTable_CurrentNoOfRows then
+//		TRACE $(TextError). Нарушение целостности данных: vTable_InitialNoOfRows=$(vTable_InitialNoOfRows)/vTable_CurrentNoOfRows=$(vTable_CurrentNoOfRows), выполнение скрипта прекращено; 
+		TRACE $(aTabName): $(TextError). Было: $(vTable_InitialNoOfRows)/Стало: $(vTable_CurrentNoOfRows), выполнение скрипта прекращено; 
+		/* генерация ошибки скрипта путем вызова несуществующей процедуры */
+		CALL ThrowException('Ошибка: нарушение целостности');
+	ENDIF
+//	TRACE Начальное количество: $(vTable_InitialNoOfRows);
+//	TRACE Итоговое количество: $(vTable_CurrentNoOfRows);
+	LET vTable_InitialNoOfRows = Null();
+	LET vTable_CurrentNoOfRows = Null();
+END SUB
+
+// savetxt: имя таблицы и имя файла необходимо брать в одинарные кавычки
+SUB savetxt (sTabName, fName)
+	IF Len('$(sTabName)') = 0 or Len('$(fName)') = 0 THEN
+    	TRACE ***************************************************************** 
+    	       Имя таблицы и файла должно быть заключено в одинарные кавычки 'file name' 
+              *****************************************************************; 
+		/* генерация ошибки скрипта путем вызова несуществующей процедуры */
+		CALL ThrowException('Ошибка сохранения таблицы в файл');
+    ENDIF
+
+	IF Len('$(fPath)') = 0 THEN
+    	SET fPath = 'lib://D/';
+    ENDIF
+	IF Right('$(fPath)', 1) <> '/' and Right('$(fPath)', 1) <> '\' THEN
+    	LET fPath = '$(fPath)' & '/';
+    ENDIF
+	STORE $(sTabName) into $(fPath)$(fName) (txt);
+
+	LET sTabName = ;
+	LET fName = ;
+	LET fPath = ;
+END SUB
+
+SUB GetQvdDate (GetQvdDate.fPath, GetQvdDate.fName, GetQvdDate.StartDate)
+	IF Len('$(GetQvdDate.fName)') = 0 THEN
+    	TRACE ***************************************************************** 
+    	       Имя файла не указано, или не заключено в одинарные кавычки 'file name' 
+              *****************************************************************; 
+		/* генерация ошибки скрипта путем вызова несуществующей процедуры */
+		CALL ThrowException('Ошибка получения времени QVD файла');
+    ENDIF
+	IF Lower(Right('$(GetQvdDate.fName)', 3)) <> 'qvd' THEN
+    	LET GetQvdDate.fName = '$(GetQvdDate.fName)' & '.qvd';
+    ENDIF
+    IF Right('$(GetQvdDate.fPath)', 1) <> '/' and Right('$(GetQvdDate.fPath)', 1) <> '\' THEN
+    	LET GetQvdDate.fPath = '$(GetQvdDate.fPath)' & '/';
+    ENDIF
+	IF Len('$(GetQvdDate.StartDate)') = 0 THEN
+    	LET GetQvdDate.StartDate = Floor('01.01.2010');
+    ENDIF
+
+	LET GL_vQvdExist = 1;
+	
+	LET GL_vQvdDate = Floor(QvdCreateTime('$(GetQvdDate.fPath)' & '$(GetQvdDate.fName)'));
+	LET GL_vQvdCreateDate = GL_vQvdDate;
+	
+	IF IsNull(GL_vQvdDate) THEN
+		LET GL_vQvdDate = Date($(GetQvdDate.StartDate) + 730485, 'YYYY-MM-DD');
+		LET GL_vQvdExist = 0;
+	ELSE
+		LET GL_vQvdDate = Date($(GL_vQvdDate) + 730485, 'YYYY-MM-DD');
+	ENDIF
+
+	LET GetQvdDate.fPath = ;
+	LET GetQvdDate.fName = ;
+END SUB
+
+// **********************************
+// Загрузка переменных из файла
+// **********************************
+SUB LoadVariables (VarFName)
+	IF Len('$(VarFName)') = 0 THEN
+    	TRACE ***************************************************************** 
+    	       Имя файла не указано, или не заключено в одинарные кавычки 'file name' 
+              *****************************************************************; 
+		/* генерация ошибки скрипта путем вызова несуществующей процедуры */
+		CALL ThrowException('Ошибка загрузки файла с переменными');
+    ENDIF
+	IF Lower(Left('$(VarFName)', 4)) <> 'lib:' THEN
+		LET VarFName = 'lib://D/' & '$(VarFName)';
+	ENDIF
+
+	[Variables]:
+	LOAD
+	    @1 as Var,
+	    @2 as Expression
+	 FROM [$(VarFName)]
+	(txt, utf8, no labels, delimiter is ';', msq);
+
+	FOR i = 0 to NoOfRows('Variables') - 1
+		LET vVar = Peek('Var', i, 'Variables');
+	    LET [$(vVar)] = Peek('Expression', i, 'Variables');
+	NEXT
+
+	LET vVar=;
+	LET i=;
+	LET VarFName =;
+
+	DROP Tables Variables;
+END SUB

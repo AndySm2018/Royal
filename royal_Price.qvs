@@ -1,0 +1,119 @@
+﻿TRACE ***************************************************************** 
+       Цены партий 
+      *****************************************************************;
+
+LET vLoad = Time(Now(1));
+
+SET vSeb = "82E68C89A51992AA11E6A727C6EE0C7B";		// ИД Себестоимости
+SET vPseb = "82E68C89A51992AA11E6A727C6EE0C79";		// ИД 1-й Себестоимости
+//SET v6X = "ADD0001D60FDB25111DE7AE414802C55";		// ИД 6X
+//SET vZakupka = "A3FEEFC8295889EE467F378A684D11FC";	// ИД Закупочной цены
+LET v000    = AutoNumber('00000000000000000000000000000000', 'Серия');
+LET vAseb   = AutoNumber('$(vSeb)', 'ТипЦен');
+LET vAPseb  = AutoNumber('$(vPseb)', 'ТипЦен');
+//LET vA6X    = AutoNumber('$(v6X)', 'ТипЦен');
+//LET vAzakup = AutoNumber('$(vZakupka)', 'ТипЦен');
+
+[ЦеныПартий]:
+LOAD
+    Date(_Period - $(vDateOffset)) as ДатаЦены
+    ,RowNo() as НомерСтрокиЦен
+    ,AutoNumber(_Fld4732RRef, 'Серия') as %Серия
+    ,AutoNumber(_Fld4733RRef, 'ТипЦен') as %ТипЦен
+    ,AutoNumber(_Fld4734RRef, 'Валюта') as %Валюта
+    ,Num(_Fld4735) as Цена
+WHERE _Fld4733RRef = '$(vSeb)' or _Fld4733RRef = '$(vPseb)'; // or _Fld4733RRef = '$(v6X)' or _Fld4733RRef = '$(vZakupka)';
+;SQL SELECT
+    _Period
+    ,_Fld4732RRef
+    ,_Fld4733RRef
+    ,_Fld4734RRef
+    ,_Fld4735
+    ,_Active
+FROM $(vBaseName).dbo._InfoRg4729
+WHERE _Active = 1;
+
+[TempСебестоимость]:
+LOAD Distinct
+    %Серия
+    ,Num(LastValue(Цена)) as [TПервая себестоимость]
+    ,LastValue(ДатаЦены) as ДатаЦены
+RESIDENT ЦеныПартий
+WHERE %ТипЦен = $(vAPseb) and Len(Цена) <> 0 and %Серия <> $(v000)
+GROUP BY %Серия
+ORDER BY ДатаЦены;
+
+CONCATENATE (TempСебестоимость)
+LOAD Distinct 
+    %Серия
+    ,Num(LastValue(Цена)) as [TCебестоимость]
+    ,LastValue(ДатаЦены) as ДатаЦены
+RESIDENT ЦеныПартий
+WHERE %ТипЦен = $(vAseb) and Len(Цена) <> 0 and %Серия <> $(v000)
+GROUP BY %Серия
+ORDER BY ДатаЦены;
+
+[Себестоимость]:
+LOAD DISTINCT
+    %Серия
+    ,If(Not IsNull(FirstValue([TПервая себестоимость])), Num(FirstValue([TПервая себестоимость])), Num(FirstValue([TCебестоимость]))) as [Первая себестоимость]
+    ,Num(FirstValue([TCебестоимость])) as [Себестоимость]
+RESIDENT TempСебестоимость
+WHERE %Серия <> $(v000)
+GROUP BY %Серия
+ORDER BY ДатаЦены;
+
+DROP table TempСебестоимость;
+/*
+Call bjoin('Себестоимость');
+LEFT JOIN (Себестоимость)
+LOAD 
+    %Серия
+    ,Num(LastValue(Цена)) as [x]
+RESIDENT ЦеныПартий
+WHERE %ТипЦен = $(vA6X) and Len(Цена) <> 0 and %Серия <> $(v000)
+GROUP BY %Серия
+ORDER BY ДатаЦены;
+Call ajoin('Себестоимость', 'Добавляем x');
+
+Call bjoin('Себестоимость');
+LEFT JOIN (Себестоимость)
+LOAD 
+    %Серия
+    ,Num(LastValue(Цена)) as [z]
+RESIDENT ЦеныПартий
+WHERE %ТипЦен = $(vAzakup) and Len(Цена) <> 0 and %Серия <> $(v000)
+GROUP BY %Серия
+ORDER BY ДатаЦены;
+Call ajoin('Себестоимость', 'Добавляем z');
+*/
+DROP table ЦеныПартий;
+
+Call bjoin('Остатки');
+LEFT JOIN (Остатки)
+LOAD
+    %Серия as %СерияОстатка
+    ,Num([Первая себестоимость]) as ПерваяСебОстатка
+    ,Num(Себестоимость) as СебОстатка
+//    ,Num([x]) as [6X]
+//    ,Num([z]) as [Закупочная]
+RESIDENT Себестоимость;
+Call ajoin('Остатки', 'Добавляем ПерваяСебОстатка СебОстатка x z');
+
+//DROP fields [x], [z] from Себестоимость;
+
+/*
+Call bjoin('ОстаткиНаРеализации');
+LEFT JOIN (ОстаткиНаРеализации)
+LOAD
+    %Серия as %СерияОстаткаРеализации
+    ,Num([Первая себестоимость]) as ПерваяСебНаРеализации
+    ,Num(Себестоимость) as СебНаРеализация
+RESIDENT Себестоимость;
+Call ajoin('ОстаткиНаРеализации', 'Добавляем ПерваяСебОстатка СебОстатка');
+*/
+
+LET vLoad = Time(Time(Now(1)) - vLoad);
+TRACE
+Время загрузки: $(vLoad)
+;

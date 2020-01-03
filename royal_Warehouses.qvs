@@ -1,0 +1,19 @@
+﻿TRACE ***************************************************************** 
+       Склады 
+      *****************************************************************;
+
+[Cклады]:
+//LEFT KEEP (ОрганизацияОтбор)
+LOAD
+    AutoNumber(_IDRRef, 'Склад') as %Склад
+    ,_IDRRef as %СкладОтбор
+    ,Autonumber(_Fld263RRef, 'Организация') as %Организация
+//    ,_Fld263RRef as %ОрганизацияОтбор
+    ,_Description as Склад
+;SQL SELECT
+    _IDRRef // as %Склад
+    ,_Fld263RRef
+    ,_Description // as Склад
+FROM $(vBaseName).dbo._Reference83;
+
+//DROP Field %ОрганизацияОтбор from Cклады;

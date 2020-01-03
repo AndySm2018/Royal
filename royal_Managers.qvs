@@ -1,0 +1,57 @@
+﻿TRACE ***************************************************************** 
+       Менеджеры 
+      *****************************************************************;
+
+[Уволенные]:
+MAPPING LOAD * INLINE [
+a, b
+01, 0  
+];
+
+
+[Менеджеры]:
+LOAD Distinct
+    Autonumber(_IDRRef, 'Менеджер') as %Менеджер
+    ,Autonumber(_Fld925RRef, 'Подразделение') as %Подразделение
+    ,Autonumber(_Fld926RRef, 'Сотрудник') as %Сотрудник
+    ,_Description as Менеджер
+;SQL SELECT
+    _IDRRef
+    ,_Fld925RRef
+    ,_Fld926RRef
+    ,_Description
+FROM $(vBaseName).dbo._Reference77;
+
+LEFT JOIN (Менеджеры)
+LOAD 
+    Autonumber(_IDRRef, 'Подразделение') as %Подразделение
+    ,_Description as [Подразделение]
+;SQL SELECT
+    _IDRRef
+    ,_Description
+FROM $(vBaseName).dbo._Reference76;
+
+DROP Field [%Подразделение] from Менеджеры;
+
+LEFT JOIN (Менеджеры)
+LOAD 
+    Autonumber(_IDRRef, 'Сотрудник') as %Сотрудник
+    ,Floor(ApplyMap('Уволенные', _Fld1087, 1)) as [Не уволен]
+;SQL SELECT
+    _IDRRef
+    ,_Fld1087
+FROM $(vBaseName).dbo._Reference85;
+
+DROP Field [%Сотрудник] from Менеджеры;
+
+LEFT JOIN (Контрагенты)
+LOAD 
+    %Менеджер as %ОсновнойМенеджер
+    ,Менеджер as [Основной менеджер]
+RESIDENT Менеджеры; 
+
+LEFT JOIN (Контрагенты)
+LOAD 
+    %Менеджер as %ВторойМенеджер
+    ,Менеджер as [Второй менеджер]
+RESIDENT Менеджеры;

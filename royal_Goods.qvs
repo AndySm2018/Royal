@@ -1,0 +1,156 @@
+﻿TRACE ***************************************************************** 
+       Номенклатура 
+      *****************************************************************;
+
+
+[Классификаторы]:
+MAPPING LOAD Distinct
+    _IDRRef
+    ,_Description
+WHERE Len(Trim(_Description)) <> 0;
+;SQL SELECT 
+    _IDRRef
+    ,_Description
+FROM $(vBaseName).dbo._Reference61;
+//WHERE _Marked=0;
+
+[Бренды]:
+MAPPING LOAD DISTINCT
+    _IDRRef
+    ,_Description
+WHERE Len(Trim(_Description)) <> 0;
+;SQL SELECT 
+    _IDRRef
+    ,_Description
+FROM $(vBaseName).dbo._Reference21;
+
+[КатегорииЭтапов]:
+MAPPING LOAD DISTINCT
+    _IDRRef
+    ,_Description
+WHERE Len(Trim(_Description)) <> 0;
+;SQL SELECT 
+	_IDRRef
+	,_Description
+FROM $(vBaseName).dbo._Reference10148;
+/*
+[Номенклатура]:
+LOAD 
+    AutoNumber(_IDRRef, 'Номенклатура') as %Номенклатура
+    ,_Description as Номенклатура
+    ,ApplyMap('Бренды', _Fld841RRef, 'Не указан') as Бренд
+    ,ApplyMap('Классификаторы', _Fld851RRef, 'Не указана') as Категория
+    ,ApplyMap('КатегорииЭтапов', _Fld10149RRef, 'Не указана') as [Категория этапа]
+;SQL SELECT 
+    _IDRRef
+    ,_Description
+    ,_Fld841RRef
+    ,_Fld851RRef
+    ,_Fld10149RRef
+FROM $(vBaseName).dbo._Reference73
+WHERE _Folder<>0; //Кроме групп
+*/
+
+[Номенклатура]:
+Hierarchy (%Номенклатура, %Родитель, Группа, ParentName, Группа, Путь, '\', Глубина) 
+LOAD
+	AutoNumber(_IDRRef, 'Номенклатура') as %Номенклатура 
+    ,AutoNumber(_ParentIDRRef, 'Номенклатура') as %Родитель
+  	,Trim(PurgeChar(_Description, '!')) as Группа
+    ,ApplyMap('Бренды', _Fld841RRef, 'Не указан') as Бренд
+    ,ApplyMap('Классификаторы', _Fld851RRef, 'Не указана') as Категория
+    ,ApplyMap('КатегорииЭтапов', _Fld10149RRef, 'Не указана') as [Категория этапа]
+;SQL SELECT 
+    _IDRRef
+    ,_Description
+    ,_ParentIDRRef
+    ,_Fld841RRef
+    ,_Fld851RRef
+    ,_Fld10149RRef
+FROM $(vBaseName).dbo._Reference73;
+
+DROP Fields ParentName from Номенклатура;
+RENAME Fields Группа to Номенклатура;
+
+/*
+[Номенклатура]:
+LOAD
+	%Номенклатура 
+    ,%Родитель
+  	,Номенклатура
+    ,Бренд
+    ,Категория
+    ,[Категория этапа]
+WHERE _Folder<>0;  //Кроме групп
+Hierarchy (%Номенклатура, %Родитель, Номенклатура, ParentName, Номенклатура, Путь, '\', Глубина) 
+LOAD
+	AutoNumber(_IDRRef, 'Номенклатура') as %Номенклатура 
+    ,AutoNumber(_ParentIDRRef, 'Номенклатура') as %Родитель
+  	,Trim(_Description) as Номенклатура
+    ,ApplyMap('Бренды', _Fld841RRef, 'Не указан') as Бренд
+    ,ApplyMap('Классификаторы', _Fld851RRef, 'Не указана') as Категория
+    ,ApplyMap('КатегорииЭтапов', _Fld10149RRef, 'Не указана') as [Категория этапа]
+    ,_Folder
+;SQL SELECT 
+    _IDRRef
+    ,_Description
+    ,_ParentIDRRef
+    ,_Fld841RRef
+    ,_Fld851RRef
+    ,_Fld10149RRef
+    ,_Folder
+FROM $(vBaseName).dbo._Reference73;
+
+
+[TreeBridge]: 
+HierarchyBelongsTo (%Номенклатура, %Родитель, НаименованиеНоменклатуры, %Группа, НаименованиеГруппы) 
+LOAD
+	AutoNumber(_IDRRef, 'Номенклатура') as %Номенклатура 
+    ,AutoNumber(_ParentIDRRef, 'Номенклатура') as %Родитель
+  	,_Description as НаименованиеНоменклатуры
+;SQL SELECT 
+    _IDRRef
+    ,_Description
+    ,_ParentIDRRef
+FROM $(vBaseName).dbo._Reference73;
+
+[Группы]:
+Hierarchy (%Группа, %ГруппаРодитель, Группа, Del, Группа, DelToo, '\', ГлубинаГруппы) 
+LOAD
+	AutoNumber(_IDRRef, 'Номенклатура') as %Группа
+  	,AutoNumber(_ParentIDRRef, 'Номенклатура') as %ГруппаРодитель
+    ,Trim(PurgeChar(_Description, '!')) as Группа
+//    ,Num(AutoNumber(RowNo()), 000, ',', '') & '___' & _Description as Группа
+;SQL SELECT 
+    _IDRRef
+    ,_Description 
+    ,_ParentIDRRef
+FROM $(vBaseName).dbo._Reference73
+WHERE _Folder=0; //Только группы
+
+DROP Fields НаименованиеГруппы, НаименованиеНоменклатуры From TreeBridge;
+DROP Fields Del, DelToo From Группы;
+DROP Fields %Родитель From Номенклатура;
+*/
+
+
+/*
+[Характеристики]:
+LOAD
+    AutoNumber(_IDRRef, 'Характеристика') as %Характеристика
+    ,_Description as Характеристика
+    ,_Fld11520 as [Артикул Характеристики]
+//  ,_Fld11476 as НаименованиеПолное    
+;SQL SELECT
+    _IDRRef // as Ссылка
+    ,_Description // as Наименование
+    ,_Fld11520 // as Артикул
+//  ,_Fld11476 // as НаименованиеПолное
+FROM $(vBaseName).dbo._Reference105;
+*/
+
+LEFT JOIN (СопутствующиеТовары)
+LOAD 
+    %Номенклатура as %СопНоменклатура
+    ,Номенклатура as [Сопутствующие товары]
+RESIDENT Номенклатура;

@@ -1,0 +1,150 @@
+﻿TRACE ***************************************************************** 
+       История смены менеджеров 
+      *****************************************************************;
+
+LET vLoad = Time(Now(1));
+
+LET vQVD = '$(vQvdPath)' & 'История_смены_менеджеров#_ИсторияСменыМенеджеров.qvd';
+CALL GetQvdDate('$(vQvdPath)', 'История_смены_менеджеров#_ИсторияСменыМенеджеров.qvd');
+
+LET vFromWhere = If(GL_vQvdExist = 1,
+                'FROM $(vBaseName).dbo._InfoRg7752 WHERE _Fld7754 = ''ОсновнойМенеджерПокупателя'' and _Period >= ''$(GL_vQvdDate)''',
+                'FROM $(vBaseName).dbo._InfoRg7752 WHERE _Fld7754 = ''ОсновнойМенеджерПокупателя''');
+
+[ВремВерсии]:
+LEFT KEEP (Контрагенты)
+LOAD
+    _Period
+    ,Floor(_Period - $(vDateOffset)) as %ДатаИзменения2
+    ,AutoNumber(_Fld4485_RRRef, 'Контрагент') as %Контрагент
+    ,_Fld4488_RRRef as %НМенеджер2
+;SQL SELECT
+    _Period // as %ДатаИзменения 
+    ,_Fld4485_RRRef // as %Контрагент
+    ,_Fld4488_RRRef // as %НМенеджер2
+FROM $(vBaseName).dbo._InfoRg4484 WHERE _Fld4486 = 'ОсновнойМенеджерПокупателя';
+
+[Версии]:
+LOAD
+    %ДатаИзменения2
+    ,%Контрагент as %КонтрагентВрем
+    ,LastValue(%НМенеджер2) as %НМенеджер
+RESIDENT ВремВерсии
+GROUP BY %Контрагент, %ДатаИзменения2
+ORDER BY %Контрагент, _Period;
+
+DROP Table ВремВерсии;
+
+Call bjoin('Версии');
+LEFT JOIN (Версии)
+LOAD //Distinct
+    _IDRRef as %НМенеджер
+    ,_Description as [Новый Менеджер]
+;SQL SELECT
+    _IDRRef
+    ,_Description
+FROM $(vBaseName).dbo._Reference77; 
+Call ajoin('Версии', 'Добавляем нового менеджера');
+
+[ВремИстория]:
+NOCONCATENATE LOAD 
+    Floor(If(IsNum(%ДатаИзменения2), %ДатаИзменения2, $(#vBeginTime))) as %НачальнаяДата2
+    ,%КонтрагентВрем
+    ,%НМенеджер
+    ,[Новый Менеджер]
+RESIDENT Версии
+ORDER BY %КонтрагентВрем, %ДатаИзменения2 Asc;
+
+DROP Table Версии;
+
+[История]:
+LOAD Distinct
+    %НачальнаяДата2
+    ,%КонечнаяДата2
+    ,%НМенеджер
+    ,%КонтрагентВрем
+    ,[Новый Менеджер]
+    ,Autonumber(Num(%НачальнаяДата2) & '|' & Num(%КонечнаяДата2), 'Интервал') as %Интервал2;
+LOAD 
+    %НачальнаяДата2
+    ,Floor(If(%КонтрагентВрем = Peek('%КонтрагентВрем'), Peek('%НачальнаяДата2') - $(#vEpsilon), $(#vEndTime))) as %КонечнаяДата2    
+    ,%НМенеджер
+    ,%КонтрагентВрем
+    ,[Новый Менеджер]
+RESIDENT ВремИстория
+ORDER BY %КонтрагентВрем, %НачальнаяДата2 Desc;
+DROP TABLE ВремИстория;
+
+Call bjoin('РегистрПродажи');
+LEFT JOIN (РегистрПродажи)
+LOAD 
+    AutoNumber(_IDRRef, 'ДокументПродажи') as %ДокументПродажи
+    ,Floor(_Date_Time - $(vDateOffset)) as %ДатаПродажи
+;SQL SELECT 
+    _IDRRef
+    ,_Date_Time
+FROM $(vBaseName).dbo._Document196;
+Call ajoin('РегистрПродажи', 'Добавляем дату продажи');
+
+[ДатКонтр]:
+LOAD Distinct
+    %ДатаПродажи as %ДатаПродажи2
+    ,%КонтрагентПродажи as %КонтрагентПродажи2
+    ,Autonumber(%ДатаПродажи & '|' & %КонтрагентПродажи, 'ДатаКонтрагент') as %ДатаКонтрагент2
+RESIDENT РегистрПродажи;
+
+Call bjoin('РегистрПродажи');
+LEFT JOIN (РегистрПродажи)
+LOAD 
+    %ДатаПродажи2 as %ДатаПродажи
+    ,%КонтрагентПродажи2 as %КонтрагентПродажи
+    ,%ДатаКонтрагент2 as %ДатаКонтрагент
+RESIDENT ДатКонтр;
+Call ajoin('РегистрПродажи', 'Добавляем ДатаКонтрагент');
+
+DROP Table ДатКонтр;
+
+[Связи]:
+LOAD Distinct
+    %Дата
+    ,%Дата as сДата
+ Resident Календарь;
+
+[ВремСвязи]: 
+IntervalMatch (сДата)
+LOAD Distinct 
+    %НачальнаяДата2
+    ,%КонечнаяДата2
+RESIDENT История;
+
+JOIN (Связи)
+LOAD
+    сДата
+    ,Autonumber(Num(%НачальнаяДата2) & '|' & Num(%КонечнаяДата2), 'Интервал') as %Интервал2
+RESIDENT ВремСвязи;
+DROP TABLE ВремСвязи; 
+DROP FIELD сДата;
+
+LEFT JOIN (История)
+LOAD 
+    %Интервал2
+    ,%Дата
+RESIDENT Связи;
+DROP TABLE Связи;
+DROP FIELDS %НачальнаяДата2, %КонечнаяДата2, %Интервал2 from История;
+
+Call bjoin('РегистрПродажи');
+LEFT JOIN (РегистрПродажи)
+LOAD
+    Autonumber(%Дата & '|' & %КонтрагентВрем, 'ДатаКонтрагент') as %ДатаКонтрагент
+    ,Autonumber(%НМенеджер, 'Менеджер') as %Менеджер3
+RESIDENT История;
+Call ajoin('РегистрПродажи', 'Добавляем Менеджер');
+
+DROP Table История;
+DROP Fields [%ДатаКонтрагент] from [РегистрПродажи];
+
+LET vLoad = Time(Time(Now(1)) - vLoad);
+TRACE
+Время загрузки: $(vLoad)
+;

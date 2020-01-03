@@ -1,0 +1,101 @@
+﻿TRACE ***************************************************************** 
+       УпрКурсы 
+      *****************************************************************;
+
+LET vLoad = Time(Now(1));
+
+[Валюта]:
+MAPPING LOAD
+	*
+INLINE
+[
+	иКодВалюты, иВалюта
+    9C7094DE801C3D4311E392627E712465, USD
+    8BE9AD934F57A88D11E392EC7A3FD46D, EUR
+    9C7094DE801C3D4311E392627E712464, BYN
+    A85994DE80B8496211E63F60BEB29552, RUB
+];
+
+[ВремКурсы]:
+LOAD
+    Floor(If(IsNum(_Period), _Period - $(vDateOffset), $(#vBeginTime))) as вНачальнаяДата
+	,ApplyMap('Валюта', _Fld4544RRef) as вВалюта
+	,Floor(_Period - $(vDateOffset)) & '_' & ApplyMap('Валюта', _Fld4544RRef) as %вКурс
+    ,Num(_Fld4545) as вКурс
+;SQL SELECT
+	_Period //as Период
+	,_Fld4544RRef //as Валюта_Ссылка
+	,_Fld4545 //as Курс
+FROM $(vBaseName).dbo._InfoRg4543; // Регистр сведений "Курсы"
+
+[УпрКурсы]:
+LOAD DISTINCT
+    НачальнаяДата
+    ,КонечнаяДата
+	,Валюта
+    ,Курс
+    ,Autonumber(Num(НачальнаяДата) & '|' & Num(КонечнаяДата), 'Интервал') as %Интервал;
+LOAD 
+	вНачальнаяДата as НачальнаяДата
+    ,вВалюта as Валюта
+    ,вКурс as Курс
+    ,Floor(If(вВалюта = Peek('Валюта'), Peek('НачальнаяДата') - $(#vEpsilon), $(#vEndTime))) as КонечнаяДата
+RESIDENT ВремКурсы
+WHERE вВалюта <> 'BYN'
+ORDER BY вВалюта, вНачальнаяДата Desc;
+
+DROP TABLE ВремКурсы;
+
+[ВремСвязи]: 
+IntervalMatch (%ДатаКурса)
+LOAD DISTINCT 
+	НачальнаяДата
+    ,КонечнаяДата
+RESIDENT УпрКурсы;
+
+JOIN (Календарь_Курс)
+LOAD  
+	%ДатаКурса
+    ,Autonumber(Num(НачальнаяДата) & '|' & Num(КонечнаяДата), 'Интервал') as %Интервал
+RESIDENT ВремСвязи;
+DROP TABLE ВремСвязи; 
+
+LEFT JOIN (УпрКурсы)
+LOAD
+	%Интервал
+    ,%ДатаКурса
+RESIDENT Календарь_Курс;
+DROP TABLE Календарь_Курс;
+DROP FIELDS НачальнаяДата, КонечнаяДата, %Интервал from УпрКурсы;
+
+[УпрКурсы2]:
+NOCONCATENATE LOAD
+    *
+    ,%ДатаКурса & '_' & Валюта as %Курс
+RESIDENT УпрКурсы
+WHERE Курс <> 0 and not IsNull(%ДатаКурса);
+
+DROP Table УпрКурсы;
+RENAME Table УпрКурсы2 to УпрКурсы;
+
+[КурсUSD]:
+LOAD DISTINCT
+	%ДатаКурса
+    ,Курс as КурсUSD2
+RESIDENT УпрКурсы
+WHERE Валюта = 'EUR';
+
+DROP FIELDS %ДатаКурса, Валюта from УпрКурсы;
+
+[УпрКурс]:
+MAPPING LOAD
+	%Курс
+	,Курс
+RESIDENT УпрКурсы;
+
+DROP Table УпрКурсы;
+
+LET vLoad = Time(Time(Now(1)) - vLoad);
+TRACE
+Время загрузки: $(vLoad)
+;

@@ -1,0 +1,214 @@
+﻿TRACE ***************************************************************** 
+       Реализации 
+      *****************************************************************;
+
+LET vLoad = Time(Now(1));
+
+[Реализации]:
+LOAD 
+    AutoNumber(_IDRRef, 'Регистратор') as %Регистратор
+    ,AutoNumber(_IDRRef, 'Реализация') as %Реализация
+    ,AutoNumber(_Fld1552RRef, 'Контрагент') as %КонтрагентРеал
+    ,Text(_Number & '_' & Year(Floor(_Date_Time) - $(vDateOffset))) as НомерРеализации
+    ,Floor(_Fld3682) as Отсрочка
+    ,Num(_Fld1655) as СуммаРеализации
+    ,Floor(RangeMax(_Fld3680, _Fld3716, _Date_Time) - $(vDateOffset)) + _Fld3682 as СрокОплаты
+//    ,Floor(RangeMax(Floor(_Fld3680), Floor(_Fld3716), Floor(_Date_Time))-$(vDateOffset)) as %ДатаРеализации
+//    ,_Fld6304RRef as %Заказчик // isnull
+    ,AutoNumber(_Fld1596RRef, 'Склад') as %СкладРеализация
+    ,Floor(RangeMax(Floor(_Fld3680), Floor(_Fld3716), Floor($(#vBeginTime)), Floor(_Date_Time))-$(vDateOffset)) as %ДатаРеал
+;SQL SELECT 
+    _IDRRef
+    ,_Date_Time
+    ,_Number
+    ,_Fld3682
+    ,_Fld1655
+    ,_Fld3680
+    ,_Fld3716
+//    ,_Fld6304RRef
+    ,_Fld1552RRef
+    ,_Fld1596RRef
+FROM $(vBaseName).dbo._Document196;
+
+/*
+[ВводДанных]:
+LOAD 
+    AutoNumber(_IDRRef, 'ВводДанных') as %ВводДанных
+	,AutoNumber(_Fld2218RRef, 'Регистратор') as %Регистратор1
+    ,AutoNumber(_Fld2218RRef, 'Реализация') as %Реализация1
+    ,AutoNumber(_Fld14083RRef, 'Контрагент') as %КонтрагентРеал1
+	,Floor(_Number) as НомерРеализации1
+    ,30 as Отсрочка1
+    ,0 as СуммаРеализации1
+    ,Floor(_Date_Time) - $(vDateOffset) + 30 as СрокОплаты1
+    ,Null() as %Автомобиль1
+    ,Null() as %Заказчик1
+    ,AutoNumber(_Fld14073RRef, 'Склад') as %СкладРеализация1
+	,Floor(_Date_Time) - $(vDateOffset) as %ДатаРеал1
+WHERE _Fld14298RRef = 'A4C797125E5CA9974CD6C3522E15BFC4';
+;SQL SELECT
+    _IDRRef
+	,_Marked //as ПометкаУдаления
+	,_Date_Time //as Дата
+	,_Number //as Номер
+	,_Posted //as Проведен
+	,_Fld2218RRef //as Сделка_Ссылка
+	,_Fld14083RRef //as Контрагент_Ссылка
+	,_Fld14073RRef //as Склад_Ссылка
+	,_Fld14298RRef //as ВидОперации_Ссылка
+FROM $(vBaseName).dbo._Document159
+WHERE _Marked = 0 and _Posted = 1;
+
+CONCATENATE (Реализации)
+LOAD
+    %Регистратор1 as %Регистратор
+    ,%Реализация1 as %Реализация
+    ,%КонтрагентРеал1 as %КонтрагентРеал
+	,НомерРеализации1 as НомерРеализации
+    ,Отсрочка1 as Отсрочка
+    ,СуммаРеализации1 as СуммаРеализации
+    ,СрокОплаты1 as СрокОплаты
+    ,%Автомобиль1 as %Автомобиль
+    ,%Заказчик1 as %Заказчик
+    ,%СкладРеализация1 as %СкладРеализация
+	,%ДатаРеал1 as %ДатаРеал
+RESIDENT ВводДанных;
+*/
+
+[КурсUSDРеал]:
+MAPPING LOAD
+    %Дата as %ДатаРеализации
+    ,КурсUSD as КурсUSDРеал
+RESIDENT Курсы;    
+
+Call bjoin('РегистрПродажи');
+
+[РегистрПродажиВр]:
+NOCONCATENATE LOAD
+    *
+    ,Num(ApplyMap('КурсUSDРеал', %ДатаРеализации, null())) as КурсUSDРеал
+RESIDENT РегистрПродажи;
+
+DROP Table РегистрПродажи;
+RENAME Table РегистрПродажиВр to РегистрПродажи;
+
+Call ajoin('РегистрПродажи', 'Добавляем КурсUSDРеал');
+
+Call bjoin('Реализации');
+
+[РеализацииВр]:
+NOCONCATENATE LOAD
+    *
+    ,Num(ApplyMap('КурсUSDРеал', %ДатаРеал, null())) as КурсUSDРеализации
+RESIDENT Реализации;
+
+DROP Table Реализации;
+RENAME Table РеализацииВр to Реализации;
+
+Call ajoin('Реализации', 'Добавляем КурсUSDРеал');
+
+LEFT JOIN(Реализации)
+LOAD 
+    AutoNumber(_Document196_IDRRef, 'Регистратор') as %Регистратор
+    ,AutoNumber(_Fld3736_RRRef, 'Счет') as %Счет
+;SQL SELECT 
+    _Document196_IDRRef
+    ,_Fld3736_RRRef // as %Счет
+FROM $(vBaseName).dbo._Document196_VT3724;
+
+LEFT JOIN(Реализации)
+LOAD
+    %Регистратор
+    ,Num(Sum(СтоимостьСНДС)) as СуммаРеализацииУпр
+RESIDENT РегистрПродажи
+GROUP BY %Регистратор;
+
+LEFT JOIN(Реализации)
+LOAD 
+    AutoNumber(_IDRRef, 'Счет') as %Счет
+    ,AutoNumber(_Fld3985RRef, 'Тточка') as %Тточка
+;SQL SELECT 
+    _IDRRef //as %Счет
+    ,_Fld3985RRef //as %Тточка
+FROM $(vBaseName).dbo._Document205;
+
+LEFT JOIN(Реализации)
+LOAD 
+    AutoNumber(_IDRRef, 'Тточка') as %Тточка
+    ,AutoNumber(_Fld1413RRef, 'Область') as %Область
+    ,AutoNumber(_Fld1410RRef, 'Город') as %Город
+;SQL SELECT 
+    _IDRRef //as %Тточка
+    ,_Fld1413RRef //as %Область
+    ,_Fld1410RRef //as %Город
+FROM $(vBaseName).dbo._Reference100;
+
+[ТоварыРеализации]:
+LOAD 
+    AutoNumber(_Document196_IDRRef, 'Реализация') as %Реализация
+    ,AutoNumber(_Fld3728RRef, 'Номенклатура') as %СопНоменклатура    
+;SQL SELECT 
+    _Document196_IDRRef
+    ,_Fld3728RRef
+FROM $(vBaseName).dbo._Document196_VT3724;
+
+/*
+[ВводДанных_ТоварыРеализации]:
+LEFT KEEP (ВводДанных)
+LOAD 
+    AutoNumber(_Document159_IDRRef, 'ВводДанных') as %ВводДанных
+    ,AutoNumber(_Fld2221RRef, 'Номенклатура') as %СопНоменклатура1
+;SQL SELECT 
+    _Document159_IDRRef
+    ,_Fld2221RRef
+FROM $(vBaseName).dbo._Document159_VT2219;
+
+LEFT JOIN (ВводДанных_ТоварыРеализации)
+LOAD
+    %ВводДанных
+    ,%Реализация1
+RESIDENT ВводДанных;
+
+DROP Table ВводДанных;
+
+CONCATENATE (ТоварыРеализации)
+LOAD
+    %Реализация1 as %Реализация
+    ,%СопНоменклатура1 as %СопНоменклатура
+RESIDENT ВводДанных_ТоварыРеализации;
+
+DROP Table ВводДанных_ТоварыРеализации;
+*/
+
+[Обл]:
+MAPPING LOAD * INLINE [
+r, rr
+Минск, Минская
+];
+
+[Области]:
+LOAD 
+    AutoNumber(_IDRRef, 'Область') as %Область
+    ,ApplyMap('Обл', _Description, _Description) & ' область' as Область
+ WHERE _Description <> 'Республика'
+;SQL SELECT 
+    _IDRRef //as %Область
+    ,_Description //as Область
+FROM $(vBaseName).dbo._Reference57;
+
+[Города]:
+LOAD 
+    AutoNumber(_IDRRef, 'Город') as %Город
+    ,_Description as Город
+    ,'Беларусь' as Страна
+;SQL SELECT 
+    _IDRRef //as %Счет
+    ,_Description //as %Тточка
+FROM $(vBaseName).dbo._Reference55;
+
+DROP fields %Счет, %Тточка from Реализации; 
+
+LET vLoad = Time(Time(Now(1)) - vLoad);
+TRACE
+Время загрузки: $(vLoad)
+;

@@ -1,0 +1,139 @@
+﻿TRACE ***************************************************************** 
+       Серии 
+      *****************************************************************;
+
+LET vLoad = Time(Now(1));
+
+[Серии]:
+LOAD
+    AutoNumber(_IDRRef, 'Серия') as %Серия
+    ,Floor(_Code) as КодСерии
+    ,AutoNumber(_Fld960RRef, 'Валюта') as %ВалютаЗакупкиИмпорт
+//       ,Num(_Fld1407_TYPE) as ДокументПоступления
+//       ,_Fld1407_RTRef as ДокументПоступления_СсылкаТип
+    ,AutoNumber(_Fld973_RRRef, 'ДокументПоступления') as %ДокументПоступления
+    ,Floor(_Fld985) as НеИмпортныйТовар
+    ,AutoNumber(_Fld994RRef, 'ПредыдущаяСерия') as %ПредыдущаяСерия
+//       ,Num(_Fld12686) as ЦенаВВалютеПоступления
+    ,Num(_Fld1006) as ЦенаЗакупкиИмпорт
+    ,Num(_Fld1007) as ЦенаИмпортера
+//       ,Num(_Fld13618) as ЦенаКПродаже
+//       ,Num(_Fld13472) as ЦенаПродажиСТС
+    ,AutoNumber(_Fld1013RRef, 'СерияТранзита') as %СерияТранзита
+    ,AutoNumber(_Fld1014RRef, 'Транзит') as %Транзит
+//       ,Floor(_Fld14072) as БУ_Серия
+//       ,Floor(_Fld14071) as УУ_Серия
+    ,Text(_Fld959) as [Артикул серии]
+    ,Floor(_Fld970 - $(vDateOffset)) as ДатаОпр
+//        ,AutoNumber(_Fld24765RRef, 'Качество') as %Качество
+//        ,AutoNumber(_Fld22872RRef, 'Серия') as %ПерваяСерия
+//        ,AutoNumber(_Fld1412RRef, 'Контрагент') as %Поставщик
+;SQL SELECT
+    _IDRRef
+    ,_Code
+    ,_Fld960RRef
+//       ,_Fld1407_TYPE
+//       ,_Fld1407_RTRef
+    ,_Fld973_RRRef
+    ,_Fld985
+    ,_Fld994RRef
+//       ,_Fld12686
+    ,_Fld1006
+    ,_Fld1007
+//       ,_Fld13618
+//       ,_Fld13472
+    ,_Fld1013RRef
+    ,_Fld1014RRef    
+//       ,_Fld14072
+//       ,_Fld14071
+    ,_Fld959
+    ,_Fld970
+//        ,_Fld24765RRef
+//        ,_Fld22872RRef
+//        ,_Fld1412RRef
+FROM $(vBaseName).dbo._Reference81;
+
+[ПоступленияВрем]:
+LOAD
+	Floor(_Period - $(vDateOffset)) as Период
+	,AutoNumber(_Fld5404RRef, 'Серия') as СерияНоменклатуры_Поступления
+;SQL SELECT
+	_Period
+	,_RecordKind
+	,_Fld5404RRef
+    ,_Active
+FROM $(vBaseName).dbo._AccumRg5400
+WHERE _Active = 1 and _RecordKind = 0;
+
+// [ПерваяСерия]:
+// LOAD
+//     AutoNumber(_IDRRef, 'Серия') as %Серия
+//     ,AutoNumber(_Fld22872RRef, 'Серия') as %ПерваяСерия
+//     ,AutoNumber(_Fld1412RRef, 'Контрагент') as %Поставщик
+// ;SQL SELECT
+//     _IDRRef
+//     ,_Fld22872RRef
+//     ,_Fld1412RRef
+// FROM $(vBaseName).dbo._Reference110;
+
+[Поставщики]:
+LEFT KEEP(Серии)
+LOAD 
+    AutoNumber(_IDRRef, 'Контрагент') as %Поставщик
+    ,_Description as Поставщик
+;SQL SELECT
+    _IDRRef
+    ,_Description
+FROM $(vBaseName).dbo._Reference67
+WHERE _Folder<>0;
+
+[Поступления]:
+LOAD
+	FirstValue(Период) as ДатаПост
+    ,FirstValue(СерияНоменклатуры_Поступления) as %СерияНоменклатуры_Поступления
+RESIDENT [ПоступленияВрем]
+GROUP BY СерияНоменклатуры_Поступления
+ORDER BY Период asc;
+
+DROP Table [ПоступленияВрем];
+
+[ДатаПоступления]:
+LOAD
+	%Серия as %СерияПост
+    ,ДатаОпр as ДатаПост1
+RESIDENT [Серии];
+
+LEFT JOIN(ДатаПоступления)
+LOAD
+	%СерияНоменклатуры_Поступления as %СерияПост
+    ,ДатаПост as ДатаПост2
+RESIDENT [Поступления];
+
+DROP Table [Поступления];
+
+LEFT JOIN(Серии)
+LOAD
+	%СерияПост as %Серия 
+    ,Floor(IF(ДатаПост1 and ДатаПост1 > 0, ДатаПост1, IF(ДатаПост2, ДатаПост2, 40179))) as ДатаПоступления
+    ,Floor(Today(1) - (IF(ДатаПост1 and ДатаПост1 > 0, ДатаПост1, IF(ДатаПост2, ДатаПост2, 40179)))) as [Дней на складе]
+RESIDENT [ДатаПоступления];
+
+DROP Table ДатаПоступления;
+DROP Field [ДатаОпр] From [Серии];
+
+Call bjoin('Остатки');
+LEFT JOIN (Остатки)
+LOAD
+    %Серия as %СерияОстатка
+    ,КодСерии as КодСерииОстатка
+    ,%СерияТранзита as %СерияТранзитаОстатка
+    ,Floor([Дней на складе]) as [Дней на складе]
+RESIDENT Серии;
+Call ajoin('Остатки', 'Добавляем КодСерииОстатка и Дней на складе');
+
+DROP field [Дней на складе] from Серии;
+
+LET vLoad = Time(Time(Now(1)) - vLoad);
+TRACE
+Время загрузки: $(vLoad)
+;
