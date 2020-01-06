@@ -17,7 +17,7 @@ $(Must_Include=$(VL.IncludePath)/royal_PriceHistory.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Customers.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_ManagersHistory.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Managers.qvs);
-//Orders
+$(Must_Include=$(VL.IncludePath)/royal_Orders.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_SalesDocuments.qvs);
 //ТоварыНаРеализации
 //Товары_в_резерве

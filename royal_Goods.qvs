@@ -59,6 +59,7 @@ LOAD
   	,Trim(PurgeChar(_Description, '!')) as Группа
     ,ApplyMap('Бренды', _Fld841RRef, 'Не указан') as Бренд
     ,ApplyMap('Классификаторы', _Fld851RRef, 'Не указана') as Категория
+    ,AutoNumber(_Fld851RRef, 'Классификатор') as %Классификатор
     ,ApplyMap('КатегорииЭтапов', _Fld10149RRef, 'Не указана') as [Категория этапа]
 ;SQL SELECT 
     _IDRRef
@@ -154,3 +155,34 @@ LOAD
     %Номенклатура as %СопНоменклатура
     ,Номенклатура as [Сопутствующие товары]
 RESIDENT Номенклатура;
+
+[СвойстваНоменклатуры]:
+LOAD 
+	AutoNumber(_Fld4492_RRRef, 'Номенклатура') as %Номенклатура
+	,_Fld4493RRef as %Свойство
+	,_Fld4494_RRRef as %ЗначенияСвойства
+;SQL SELECT
+	_Fld4492_RRRef //as Объект_Ссылка
+	,_Fld4493RRef //as Свойство_Ссылка
+	,_Fld4494_RRRef //as Значение_Ссылка
+FROM $(vBaseName).dbo._InfoRg4491;
+
+LEFT JOIN (СвойстваНоменклатуры)
+LOAD
+	_IDRRef as %Свойство
+	,_Description as Свойство
+;SQL SELECT
+	_IDRRef //as Ссылка
+	,_Description //as Наименование
+FROM $(vBaseName).dbo._Chrc251;
+
+LEFT JOIN (СвойстваНоменклатуры)
+LOAD
+	_IDRRef as %ЗначенияСвойства
+	,_Description as ЗначенияСвойства
+;SQL SELECT
+	_IDRRef //as Ссылка
+	,_Description //as Наименование
+FROM $(vBaseName).dbo._Reference49;
+
+DROP Fields %Свойство, %ЗначенияСвойства;
