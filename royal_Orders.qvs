@@ -52,8 +52,8 @@ LOAD
     ,Floor(ApplyMap('СерияЗаказа', _Fld5326RRef, 1)) as [F_Врезерве]
     ,Num(_Fld5327) as Заказано
 //    ,ApplyMap('ЗакрЗаказа', _RecorderTRef, 1) * Floor(_Fld5327) as Количество
-WHERE ((_Fld5323_RTRef = '000000B1' and (_RecorderTRef='000000B1' or _RecorderTRef='000000CD' or _RecorderTRef = '0000304B' or _RecorderTRef = '000032C2'))
-or (_Fld5323_RTRef = '000000B1' and _RecorderTRef='000000C9' and _Fld5327 > 0));
+//WHERE ((_Fld5323_RTRef = '000000B1' and (_RecorderTRef='000000B1' or _RecorderTRef='000000CD' or _RecorderTRef = '0000304B' or _RecorderTRef = '000032C2'))
+//or (_Fld5323_RTRef = '000000B1' and _RecorderTRef='000000C9' and _Fld5327 > 0));
 // and (_Fld5322RRef = '8AD100248149A06A11DEF6D713C3095B' or _Fld5322RRef = '8AD100248149A06A11DEF6D7ACEEE371' or _Fld5322RRef = 'BEA2001FC674582711E2D42A26400FD2'
 // or _Fld5322RRef = '8AD100248149A06A11DEF6F1DE1F8360' or _Fld5322RRef = '8AD100248149A06A11DEF6D7ACEEE36F' or _Fld5322RRef = '993E001FC674582711E2905ED4AC062E'
 // or _Fld5322RRef = '8AD100248149A06A11DEF6D7ACEEE3B1' or _Fld5322RRef = '80EB3497F6007BC811E83CADC7595C7F' or _Fld5322RRef = '80DA3497F6007BC811E74C18EA0D11A9'
