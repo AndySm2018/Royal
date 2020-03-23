@@ -15,6 +15,7 @@ $(Must_Include=$(VL.IncludePath)/royal_CurrencyRate.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Sales.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_PriceHistory.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Customers.qvs);
+$(Must_Include=$(VL.IncludePath)/royal_PlanProdaj.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_ManagersHistory.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Managers.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Orders.qvs);

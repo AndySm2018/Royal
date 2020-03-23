@@ -1,0 +1,122 @@
+﻿TRACE ***************************************************************** 
+       План продаж 
+      *****************************************************************;
+
+[ПланРент]:
+MAPPING
+LOAD * INLINE [
+Подраздел, Рентаб
+80CF9C5C8E4F724811E71459F9D2B57C, 0.18
+80D19C5C8E4F724811E7B27DB2EA33E0, 0.25
+80D39C5C8E4F724811E85F2067422935, 0.3
+80D79C5C8E4F724811E9CD9676FAAF4E, 0.25
+];
+
+[Сотрудники]:
+MAPPING
+LOAD DISTINCT
+    _Fld926RRef as %Сотрудник_Ссылка
+    ,_IDRRef as %МенеджерПл    
+//    ,Autonumber(_IDRRef, 'Менеджер') as %МенеджерПл
+;SQL SELECT
+    _Fld926RRef
+    ,_IDRRef
+FROM $(vBaseName).dbo._Reference77;
+
+[ПланПродаж]:
+LOAD 
+	Floor(_Period - $(vDateOffset)) as %ДатаПлана
+    ,MonthName(Floor(_Period - $(vDateOffset))) as %МесяцГодПлана
+    ,ApplyMap('Сотрудники', _Fld10100RRef, _Fld10100RRef) as ВремМен
+    ,Autonumber(ApplyMap('Сотрудники', _Fld10100RRef, _Fld10100RRef), 'Менеджер') as %МенеджерПлана
+//	,_RecorderRRef //as Регистратор_Ссылка
+    ,Autonumber(MonthName(Floor(_Period - $(vDateOffset))) 
+    & Autonumber(ApplyMap('Сотрудники', _Fld10100RRef, _Fld10100RRef), 'Менеджер'), 'МесяцГодМенеджер') as %МесяцГодМенеджер
+	,Num(_Fld10106) as ПланПродаж
+	,Num(_Fld10107) as ПланОплат
+    ,Num(_Fld10106 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
+    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланПродажДень
+    ,Num(_Fld10107 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
+    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланОплатДень
+;SQL SELECT 
+	_Period //as Период
+//	,_RecorderRRef //as Регистратор_Ссылка
+	,_Fld10100RRef //as Сотрудник_Ссылка
+	,_Fld10106 //as ПланПродаж
+	,_Fld10107 //as ПланОплат
+FROM $(vBaseName).dbo._InfoRg10099;
+
+CALL savetxt('ПланПродаж', 'ПланПродаж1.csv');
+
+LEFT JOIN (ПланПродаж)
+LOAD
+    _IDRRef as ВремМен
+    ,Num(ApplyMap('ПланРент', _Fld925RRef, 0)) as ПланРентабельности
+//    ,_Fld925RRef as Подр
+;SQL SELECT
+    _IDRRef
+    ,_Fld925RRef
+FROM $(vBaseName).dbo._Reference77;
+
+DROP Field ВремМен From ПланПродаж;
+
+CALL savetxt('ПланПродаж', 'ПланПродаж2.csv');
+
+LEFT JOIN (ПланПродаж)
+LOAD
+    *
+    ,Num(ПланПродаж / 1.2 * ПланРентабельности) as ПланПрибыли
+    ,Num(ПланПродаж / 1.2 * ПланРентабельности / Day(MonthEnd(%ДатаПлана))) as ПланПрибылиДень
+RESIDENT ПланПродаж;
+
+CALL savetxt('ПланПродаж', 'ПланПродаж3.csv');
+
+[ПланПродажПоКонтрагентам]:
+LOAD 
+	Floor(_Period - $(vDateOffset)) as %ДатаПланаПоКонтрагентам
+    ,MonthName(Floor(_Period - $(vDateOffset))) as %МесяцГодПланаПоКонтрагентам
+    ,Autonumber(ApplyMap('Сотрудники', _Fld10188RRef, _Fld10188RRef), 'Менеджер') as %МенеджерПланаПоКонтрагентам
+    ,AutoNumber(_Fld10189RRef, 'Контрагент') as %КонтрагентПланаПоКонтрагентам
+    ,Autonumber(MonthName(Floor(_Period - $(vDateOffset))) 
+    & '|' & Autonumber(ApplyMap('Сотрудники', _Fld10188RRef, _Fld10188RRef), 'Менеджер')
+    & '|' & AutoNumber(_Fld10189RRef, 'Контрагент'), 'МесяцГодМенеджерКонтрагент') as %МесяцГодМенеджерКонтрагент
+	,Num(_Fld10190) as ПланПродажПоКонтрагентам
+	,Num(_Fld10191) as ПланОплатПоКонтрагентам
+    ,Num(_Fld10190 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
+    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланПродажДеньПоКонтрагентам
+    ,Num(_Fld10191 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
+    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланОплатДеньПоКонтрагентам
+;SQL SELECT 
+	_Period //as Период
+//	,_RecorderRRef //as Регистратор_Ссылка
+	,_Fld10188RRef //as Сотрудник_Ссылка
+	,_Fld10189RRef //as Контрагент_Ссылка
+	,_Fld10190 //as ПланПродаж
+	,_Fld10191 //as ПланОплат
+FROM $(vBaseName).dbo._InfoRg10187;
+
+[Оплаты]:
+LOAD
+    Floor(_Period - $(vDateOffset)) as %ДатаОплаты
+    ,AutoNumber(_Fld4790RRef, 'Контрагент') as %КонтрагентОплаты
+    ,MonthName(Floor(_Period - $(vDateOffset))) as %МесяцГодОплаты
+    ,Autonumber(Floor(_Period - $(vDateOffset)) & '|' 
+    & AutoNumber(_Fld4790RRef, 'Контрагент'), 'ДатаКонтрагент') as %ДатаКонтрагентОплаты
+    ,RowNo() as НомерСтрокиДокументаОплаты
+    ,Num(_Fld4791) as СуммаОплаты
+    ,Num(_Fld4792) as СуммаОплатыУпр
+    // ,Num(If(Not _RecordKind, _Fld4791, - _Fld4791)) as СуммаОплаты
+    // ,Num(If(Not _RecordKind, _Fld4792, - _Fld4792)) as СуммаОплатыУпр
+;SQL SELECT
+    _Period // as Период
+    ,_RecordKind // as ВидДвижения
+    ,_Fld4790RRef // as Контрагент
+    ,_Fld4788RRef // as Договор
+    ,_Fld4789_RRRef // as Сделка
+    ,_Fld4791 // as СуммаВзаиморасчетов
+    ,_Fld4792 // as СуммаУпр
+//    ,_RecorderTRef //_Fld8758_RTRef  //_Fld8758_TYPE
+    ,_Active
+FROM $(vBaseName).dbo._AccumRg4787 
+WHERE _Active = 1 and _RecordKind = 1 and (_RecorderTRef IN (0x000000B7, 0x0000007F));
+//Только приход денег (в 1с это расход) по Приходному ордеру, или выписке.
