@@ -1,4 +1,4 @@
-﻿SET VL.IncludePath = 'https://raw.githubusercontent.com/AndySm2018/Royal/master';				// Путь к локальным файлам QVS
+﻿SET VL.IncludePath = 'https://raw.githubusercontent.com/AndySm2018/Royal/master';	// Путь к файлам QVS
 //SET vQvdPath = 'lib://D/DataQlik/';				// Путь к файлам QVD
 //SET vQvdPath = 'lib://Z/Общая/QlikPojects/DataQlik/Transformed/';				// Путь к файлам QVD
 
@@ -15,6 +15,7 @@ $(Must_Include=$(VL.IncludePath)/royal_CurrencyRate.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Sales.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_PriceHistory.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Customers.qvs);
+$(Must_Include=$(VL.IncludePath)/royal_PlanProdaj.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_ManagersHistory.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Managers.qvs);
 $(Must_Include=$(VL.IncludePath)/royal_Orders.qvs);
