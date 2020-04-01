@@ -95,6 +95,49 @@ LOAD
 	,_Fld10191 //as ПланОплат
 FROM $(vBaseName).dbo._InfoRg10187;
 
+[ВрОпл]:
+LOAD
+    Floor(_Period - $(vDateOffset)) as %ДатаОп
+    ,_Fld4790RRef as %КонтрагентОп
+    ,MonthName(Floor(_Period - $(vDateOffset))) as %МесяцГодОп
+    ,Year(Floor(_Period - $(vDateOffset))) & '|' & _Fld4790RRef as %ГодКонтрагентОп
+    ,RowNo() as НомерСтрокиДокументаОплаты
+    ,MonthStart(Floor(_Period - $(vDateOffset))) & '|' & _Fld4790RRef as %МесяцГодКонтрагентОп
+    ,QuarterStart(Floor(_Period - $(vDateOffset))) & '|' & _Fld4790RRef as %КвртКонтрагентОп
+;SQL SELECT
+    _Period // as Период
+    ,_RecordKind // as ВидДвижения
+    ,_Fld4790RRef // as Контрагент
+    ,_Active
+FROM $(vBaseName).dbo._AccumRg4787 
+WHERE _Active = 1 and _RecordKind = 1 and (_RecorderTRef IN (0x000000B7, 0x0000007F));
+
+[ОплГод]:
+MAPPING LOAD
+    FirstValue(%ГодКонтрагентОп) as %ГодКонтрагентОп
+    ,1 as фл1
+RESIDENT ВрОпл
+GROUP BY %КонтрагентОп
+ORDER BY %ДатаОп;
+
+[ОплМес]:
+MAPPING LOAD
+    FirstValue(%МесяцГодКонтрагентОп) as %МесяцГодКонтрагентОп
+    ,1 as фл2
+RESIDENT ВрОпл
+GROUP BY %КонтрагентОп
+ORDER BY %ДатаОп;
+
+[ОплКврт]:
+MAPPING LOAD
+    FirstValue(%КвртКонтрагентОп) as %КвртКонтрагентОп
+    ,1 as фл3
+RESIDENT ВрОпл
+GROUP BY %КонтрагентОп
+ORDER BY %ДатаОп;
+
+DROP Table ВрОпл;
+
 [Оплаты]:
 LOAD
     Floor(_Period - $(vDateOffset)) as %ДатаОплаты
@@ -105,6 +148,9 @@ LOAD
     ,RowNo() as НомерСтрокиДокументаОплаты
     ,Num(_Fld4791) as СуммаОплаты
     ,Num(_Fld4792) as СуммаОплатыУпр
+    ,ApplyMap('ОплГод', (Year(Floor(_Period - $(vDateOffset))) & '|' & _Fld4790RRef), 0) as НовыйВГоду
+    ,ApplyMap('ОплМес', (MonthStart(Floor(_Period - $(vDateOffset))) & '|' & _Fld4790RRef), 0) as НовыйВМесяце
+    ,ApplyMap('ОплКврт', (QuarterStart(Floor(_Period - $(vDateOffset))) & '|' & _Fld4790RRef), 0) as НовыйВКвартале
     // ,Num(If(Not _RecordKind, _Fld4791, - _Fld4791)) as СуммаОплаты
     // ,Num(If(Not _RecordKind, _Fld4792, - _Fld4792)) as СуммаОплатыУпр
 ;SQL SELECT
