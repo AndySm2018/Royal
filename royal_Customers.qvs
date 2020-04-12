@@ -2,16 +2,6 @@
        Организации и контрагенты 
       *****************************************************************;
 
-[ТипКонтр]:
-MAPPING LOAD Distinct
-    _IDRRef as %ТК
-    ,_Description as ТК
-;
-SQL SELECT
-    _IDRRef // as Ссылка
-    ,_Description  //as Наименование
-FROM $(vBaseName).dbo._Reference97;
-
 [Собственные]:
 MAPPING LOAD * INLINE [
 a, b

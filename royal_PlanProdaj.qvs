@@ -46,7 +46,7 @@ LOAD
 	,_Fld10107 //as ПланОплат
 FROM $(vBaseName).dbo._InfoRg10099;
 
-CALL savetxt('ПланПродаж', 'ПланПродаж1.csv');
+// CALL savetxt('ПланПродаж', 'ПланПродаж1.csv');
 
 LEFT JOIN (ПланПродаж)
 LOAD
@@ -60,7 +60,7 @@ FROM $(vBaseName).dbo._Reference77;
 
 DROP Field ВремМен From ПланПродаж;
 
-CALL savetxt('ПланПродаж', 'ПланПродаж2.csv');
+// CALL savetxt('ПланПродаж', 'ПланПродаж2.csv');
 
 LEFT JOIN (ПланПродаж)
 LOAD
@@ -69,7 +69,7 @@ LOAD
     ,Num(ПланПродаж / 1.2 * ПланРентабельности / Day(MonthEnd(%ДатаПлана))) as ПланПрибылиДень
 RESIDENT ПланПродаж;
 
-CALL savetxt('ПланПродаж', 'ПланПродаж3.csv');
+// CALL savetxt('ПланПродаж', 'ПланПродаж3.csv');
 
 [ПланПродажПоКонтрагентам]:
 LOAD 

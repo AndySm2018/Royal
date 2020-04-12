@@ -4,12 +4,12 @@
 
 LET vLoad = Time(Now(1));
 
-LET vQVD = '$(vQvdPath)' & 'История_смены_менеджеров#_ИсторияСменыМенеджеров.qvd';
-CALL GetQvdDate('$(vQvdPath)', 'История_смены_менеджеров#_ИсторияСменыМенеджеров.qvd');
+// LET vQVD = '$(vQvdPath)' & 'История_смены_менеджеров#_ИсторияСменыМенеджеров.qvd';
+// CALL GetQvdDate('$(vQvdPath)', 'История_смены_менеджеров#_ИсторияСменыМенеджеров.qvd');
 
-LET vFromWhere = If(GL_vQvdExist = 1,
-                'FROM $(vBaseName).dbo._InfoRg7752 WHERE _Fld7754 = ''ОсновнойМенеджерПокупателя'' and _Period >= ''$(GL_vQvdDate)''',
-                'FROM $(vBaseName).dbo._InfoRg7752 WHERE _Fld7754 = ''ОсновнойМенеджерПокупателя''');
+// LET vFromWhere = If(GL_vQvdExist = 1,
+//                 'FROM $(vBaseName).dbo._InfoRg7752 WHERE _Fld7754 = ''ОсновнойМенеджерПокупателя'' and _Period >= ''$(GL_vQvdDate)''',
+//                 'FROM $(vBaseName).dbo._InfoRg7752 WHERE _Fld7754 = ''ОсновнойМенеджерПокупателя''');
 
 [ВремВерсии]:
 LEFT KEEP (Контрагенты)

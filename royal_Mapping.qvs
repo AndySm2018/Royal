@@ -1,0 +1,155 @@
+﻿TRACE ***************************************************************** 
+       MAP таблицы
+      *****************************************************************;
+/*
+1) Создаем мар таблицу сумма реализации по номенлктауре: Реал + серия + строка (может + серия), сумма
+2) Создаем мар таблицу себика: серия, себик
+3) Создаем мар таблицу курса: Дата, курс
+*/
+
+[СуммаРеалНом]:
+MAPPING
+LOAD DISTINCT
+    _Document196_IDRRef & '|' & _Fld3731RRef as IDреал
+    ,Num(Sum(_Fld3740)) as СуммаНом
+GROUP BY _Document196_IDRRef, _Fld3731RRef
+;SQL SELECT
+    _Document196_IDRRef
+    ,_Fld3731RRef
+    ,_LineNo3725
+    ,_Fld3740
+FROM $(vBaseName).dbo._Document196_VT3724;
+
+SET vSeb = "82E68C89A51992AA11E6A727C6EE0C7B";		// ИД Себестоимости
+SET vPseb = "82E68C89A51992AA11E6A727C6EE0C79";		// ИД 1-й Себестоимости
+
+LET v000    = AutoNumber('00000000000000000000000000000000', 'Серия');
+LET vAseb   = AutoNumber('$(vSeb)', 'ТипЦен');
+LET vAPseb  = AutoNumber('$(vPseb)', 'ТипЦен');
+
+[ЦеныПартий1]:
+LOAD
+    Date(_Period - $(vDateOffset)) as ДатаЦены
+    ,RowNo() as НомерСтрокиЦен
+    ,_Fld4732RRef as %СерияСебик
+    ,AutoNumber(_Fld4733RRef, 'ТипЦен') as %ТипЦен
+//    ,AutoNumber(_Fld4734RRef, 'Валюта') as %Валюта
+    ,Num(_Fld4735) as Цена
+WHERE _Fld4733RRef = '$(vSeb)' or _Fld4733RRef = '$(vPseb)'; // or _Fld4733RRef = '$(v6X)' or _Fld4733RRef = '$(vZakupka)';
+;SQL SELECT
+    _Period
+    ,_Fld4732RRef
+    ,_Fld4733RRef
+//    ,_Fld4734RRef
+    ,_Fld4735
+    ,_Active
+FROM $(vBaseName).dbo._InfoRg4729
+WHERE _Active = 1;
+
+[TempСебестоимость1]:
+LOAD Distinct
+    %СерияСебик
+    ,Num(LastValue(Цена)) as [TПервая себестоимость]
+    ,LastValue(ДатаЦены) as ДатаЦены
+RESIDENT ЦеныПартий1
+WHERE %ТипЦен = $(vAPseb) and Len(Цена) <> 0 and %СерияСебик <> $(v000)
+GROUP BY %СерияСебик
+ORDER BY ДатаЦены;
+
+CONCATENATE (TempСебестоимость1)
+LOAD Distinct 
+    %СерияСебик
+    ,Num(LastValue(Цена)) as [TCебестоимость]
+    ,LastValue(ДатаЦены) as ДатаЦены
+RESIDENT ЦеныПартий1
+WHERE %ТипЦен = $(vAseb) and Len(Цена) <> 0 and %СерияСебик <> $(v000)
+GROUP BY %СерияСебик
+ORDER BY ДатаЦены;
+
+DROP Table ЦеныПартий1;
+
+[Себик]:
+MAPPING 
+LOAD DISTINCT
+    %СерияСебик
+    ,If(Not IsNull(FirstValue([TПервая себестоимость])), Num(FirstValue([TПервая себестоимость]))
+        , Num(FirstValue([TCебестоимость]))) as Себик
+RESIDENT TempСебестоимость1
+WHERE %СерияСебик <> $(v000)
+GROUP BY %СерияСебик
+ORDER BY ДатаЦены;
+
+DROP Table TempСебестоимость1;
+
+LET vSeb =;
+LET vPseb =;
+LET v000 =;
+LET vAseb =;
+LET vAPseb =;
+
+[КурсEUR]:
+MAPPING
+LOAD DISTINCT
+    %ДатаКурса as %ДатаКурсаEUR
+    ,КурсUSD2 as КурсEUR2
+RESIDENT КурсUSD;
+
+[ТипКонтр]:
+MAPPING 
+LOAD DISTINCT
+    _IDRRef as %ТК
+    ,_Description as ТК
+;SQL SELECT
+    _IDRRef // as Ссылка
+    ,_Description  //as Наименование
+FROM $(vBaseName).dbo._Reference97;
+
+[Контр_ТипКонтр]:
+MAPPING
+LOAD DISTINCT
+    _IDRRef as %Кнтр
+    ,_Fld713RRef as ТпКнтр
+;SQL SELECT
+    _IDRRef
+    ,_Fld713RRef
+FROM $(vBaseName).dbo._Reference67
+WHERE _Folder<>0; // не каталог
+
+[КолРеалНом]:
+MAPPING
+LOAD DISTINCT
+    _Fld5108_RRRef & '|' & _Fld5103RRef as IDреалПр
+    ,Num(Sum(_Fld5111)) as КолНом
+WHERE Len(_Fld5103RRef) > 0 and _Fld5103RRef <> '00000000000000000000000000000000' and _Fld5111 > 0
+GROUP BY _Fld5108_RRRef, _Fld5103RRef;
+;SQL SELECT
+    _LineNo
+    ,_Fld5103RRef
+    ,_Fld5108_RRRef
+    ,_Fld5111
+    ,_Active
+FROM $(vBaseName).dbo._AccumRg5099
+WHERE _Active = 1;
+
+[ПрОрд]:
+SQL SELECT
+	_IDRRef
+	,_Date_Time
+FROM $(vBaseName).dbo._Document183;
+
+CONCATENATE (ПрОрд)
+LOAD
+    *
+;SQL SELECT
+	_IDRRef
+	,_Date_Time
+FROM $(vBaseName).dbo._Document127;
+
+[ДокОпл]:
+MAPPING
+LOAD DISTINCT
+    _IDRRef
+    ,Floor(_Date_Time - $(vDateOffset)) as _Period
+RESIDENT ПрОрд;
+
+DROP Table ПрОрд;

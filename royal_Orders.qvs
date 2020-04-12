@@ -13,12 +13,12 @@ X,Y
 //-----------------------------------------------------------------------------------------------------------------------
 //  Отбираем только заказы, корректировки заказов в большую сторону, комплектации, укомплектации, разукомплектации 
 //-----------------------------------------------------------------------------------------------------------------------
-LET vQVD = '$(vQvdPath)' & 'Заказы#_Заказы.qvd';
-CALL GetQvdDate('$(vQvdPath)', 'Заказы#_Заказы.qvd');
+// LET vQVD = '$(vQvdPath)' & 'Заказы#_Заказы.qvd';
+// CALL GetQvdDate('$(vQvdPath)', 'Заказы#_Заказы.qvd');
 
-LET vFromWhere = If(GL_vQvdExist = 1,
-                'FROM $(vBaseName).dbo._AccumRg5321 WHERE _Active = 1 and _Period >= ''$(GL_vQvdDate)''',
-                'FROM $(vBaseName).dbo._AccumRg5321 WHERE _Active = 1');
+// LET vFromWhere = If(GL_vQvdExist = 1,
+//                 'FROM $(vBaseName).dbo._AccumRg5321 WHERE _Active = 1 and _Period >= ''$(GL_vQvdDate)''',
+//                 'FROM $(vBaseName).dbo._AccumRg5321 WHERE _Active = 1');
 
     //WHERE _Fld5323_RTRef = '000000B1'; 
     //000000B1 - Заказ покупателя
