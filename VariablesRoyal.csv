@@ -1913,15 +1913,20 @@ Sum
 )
 "
 exp_ОборачиваемостьВДнях_шт;"
-Floor
+Alt
 (
-  ($(exp_СреднийТЗвМесяц_Шт))
-  * 
+  Floor
   (
-    Max(total Дата) - Min(total Дата)
-  ) 
-  / 
-  Sum([Продано единиц])
+    ($(exp_СреднийТЗвМесяц_Шт))
+    * 
+    (
+      Count(distinct {<Остаток = {""> 0""}>} Дата)
+//      Max(total Дата) - Min(total Дата)
+    ) 
+    / 
+    RangeMax(($(exp_ПроданоЕдиниц)), 1)
+  )
+, 0
 )
 "
 exp_ОборачиваемостьВдняхТекущийГод;"
@@ -1950,10 +1955,11 @@ Floor
       ($(exp_СреднийТЗвМесяц_Шт))
       * 
       (
-        Max(total Дата) - Min(total Дата)
+        Count(distinct {<Остаток = {""> 0""}>} Дата)
+//        Max(total Дата) - Min(total Дата)
       ) 
       / 
-      Sum([Продано единиц])
+      RangeMax(($(exp_ПроданоЕдиниц)), 1)
     )
   )
   , 0.01
@@ -3004,7 +3010,7 @@ Floor
   ) 
   / 
   (
-    $(func_MonthDiff(Min(total Дата), Max(total Дата)))
+    $(func_MonthDiff(Min(total Дата), Max(total Дата))) + 1
   )
 )
 "
@@ -3030,7 +3036,7 @@ exp_СреднийТЗвМесяц_себ;"
 ) 
 / 
 (
-  $(func_MonthDiff(Min(total Дата), Max(total Дата)))
+  $(func_MonthDiff(Min(total Дата), Max(total Дата))) + 1
 )
 "
 exp_СреднийЧек;"
