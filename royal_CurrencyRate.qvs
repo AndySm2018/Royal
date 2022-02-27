@@ -93,6 +93,12 @@ MAPPING LOAD
 	,Курс
 RESIDENT УпрКурсы;
 
+[КурсEUR]:
+MAPPING LOAD
+    %ДатаКурса as %ДКурса
+    ,КурсUSD2 as КурсEUR
+RESIDENT КурсUSD;
+
 DROP Table УпрКурсы;
 
 LET vLoad = Time(Time(Now(1)) - vLoad);

@@ -1,6 +1,7 @@
-﻿TRACE ***************************************************************** 
-       План продаж 
-      *****************************************************************;
+﻿TRACE
+************************************************************
+    План продаж 
+************************************************************;
 
 [ПланРент]:
 MAPPING
@@ -12,6 +13,7 @@ LOAD * INLINE [
 80D79C5C8E4F724811E9CD9676FAAF4E, 0.25
 ];
 
+/*
 [Сотрудники]:
 MAPPING
 LOAD DISTINCT
@@ -22,32 +24,130 @@ LOAD DISTINCT
     _Fld926RRef
     ,_IDRRef
 FROM $(vBaseName).dbo._Reference77;
+*/
+
+[СделкаЗаказ]:
+MAPPING
+LOAD DISTINCT
+    *
+;SQL SELECT
+    _Fld5108_RRRef
+    ,_Fld5106_RRRef
+FROM $(vBaseName).dbo._AccumRg5099;
 
 [ПланПродаж]:
 LOAD 
 	Floor(_Period - $(vDateOffset)) as %ДатаПлана
     ,MonthName(Floor(_Period - $(vDateOffset))) as %МесяцГодПлана
-    ,ApplyMap('Сотрудники', _Fld10100RRef, _Fld10100RRef) as ВремМен
-    ,Autonumber(ApplyMap('Сотрудники', _Fld10100RRef, _Fld10100RRef), 'Менеджер') as %МенеджерПлана
+    ,_Fld10100RRef as ВремМен
+    ,Autonumber(_Fld10100RRef, 'Менеджер') as %МенеджерПлана
 //	,_RecorderRRef //as Регистратор_Ссылка
     ,Autonumber(MonthName(Floor(_Period - $(vDateOffset))) 
-    & Autonumber(ApplyMap('Сотрудники', _Fld10100RRef, _Fld10100RRef), 'Менеджер'), 'МесяцГодМенеджер') as %МесяцГодМенеджер
+    & '|' & Autonumber(_Fld10100RRef, 'Менеджер'), 'МесяцГодМенеджер') as %МесяцГодМенеджер
 	,Num(_Fld10106) as ПланПродаж
 	,Num(_Fld10107) as ПланОплат
+    ,Num(_Fld11541) as ПланПрибыли
+    ,Num(_Fld11540 / 100) as ПланРентабельности
     ,Num(_Fld10106 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
     - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланПродажДень
     ,Num(_Fld10107 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
     - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланОплатДень
+    ,Num(_Fld11541 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
+    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланПрибылиДень
 ;SQL SELECT 
 	_Period //as Период
 //	,_RecorderRRef //as Регистратор_Ссылка
 	,_Fld10100RRef //as Сотрудник_Ссылка
 	,_Fld10106 //as ПланПродаж
 	,_Fld10107 //as ПланОплат
+    ,_Fld11541 //ПланПрибыли
+    ,_Fld11540 //ПланРентабельности
 FROM $(vBaseName).dbo._InfoRg10099;
 
-// CALL savetxt('ПланПродаж', 'ПланПродаж1.csv');
+//CALL savetxt('ПланПродаж', 'ПланПродаж1.csv');
 
+[ПланПродажПоКонтрагентам]:
+LOAD 
+	Floor(_Period - $(vDateOffset)) as %ДатаПланаПоКонтрагентам
+    ,MonthName(Floor(_Period - $(vDateOffset))) as %МесяцГодПланаПоКонтрагентам
+    ,Autonumber(_Fld10188RRef, 'Менеджер') as %МенеджерПланаПоКонтрагентам
+    ,_Fld10188RRef as ВремМенКонт
+    ,AutoNumber(_Fld10189RRef, 'Контрагент') as %КонтрагентПланаПоКонтрагентам
+    ,Autonumber(MonthName(Floor(_Period - $(vDateOffset))) 
+    & '|' & Autonumber(_Fld10188RRef, 'Менеджер'), 'МесяцГодМенеджер') as %МесяцГодМенеджер2
+    ,Autonumber(MonthName(Floor(_Period - $(vDateOffset))) 
+    & '|' & Autonumber(_Fld10188RRef, 'Менеджер')
+    & '|' & AutoNumber(_Fld10189RRef, 'Контрагент'), 'МесяцГодМенеджерКонтрагент') as %МесяцГодМенеджерКонтрагент
+	,Num(_Fld10190) as ПланПродажПоКонтрагентам
+	,Num(_Fld10191) as ПланОплатПоКонтрагентам
+    ,Num(_Fld11543) as ПланПрибылиПоКонтрагентам
+    ,Num(_Fld11542 / 100) as ПланРентабельностиПоКонтрагентам
+    ,Num(_Fld10190 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
+    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланПродажДеньПоКонтрагентам
+    ,Num(_Fld10191 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
+    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланОплатДеньПоКонтрагентам
+    ,Num(_Fld11543 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
+    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланПрибылиДеньПоКонтрагентам
+    ,Num(_Fld11542 / 100) as ПланРентабельностиДеньПоКонтрагентам
+;SQL SELECT 
+	_Period //as Период
+//	,_RecorderRRef //as Регистратор_Ссылка
+	,_Fld10188RRef //as Сотрудник_Ссылка
+	,_Fld10189RRef //as Контрагент_Ссылка
+	,_Fld10190 //as ПланПродаж
+	,_Fld10191 //as ПланОплат
+    ,_Fld11543 // ПланПрибыли
+    ,_Fld11542 // ПланРентабельности
+FROM $(vBaseName).dbo._InfoRg10187;
+
+//CALL savetxt('ПланПродажПоКонтрагентам', 'ПланПродаж21.csv');
+
+[ГрупПланКонт]:
+LOAD 
+	%ДатаПланаПоКонтрагентам as %ДатаПланаПоКонтрагентам2
+    ,%МесяцГодПланаПоКонтрагентам as %МесяцГодПланаПоКонтрагентам2
+    ,ВремМенКонт as ВремМенКонт2
+    ,%МенеджерПланаПоКонтрагентам as %МенеджерПланаПоКонтрагентам2
+    ,%МесяцГодМенеджер2 as %МесяцГодМенеджер3
+    ,Sum(ПланПродажПоКонтрагентам) as ПланПродажПоКонтрагентам2
+	,Sum(ПланОплатПоКонтрагентам) as ПланОплатПоКонтрагентам2
+    ,Sum(ПланПрибылиПоКонтрагентам) as ПланПрибылиПоКонтрагентам2
+    ,Avg(ПланРентабельностиПоКонтрагентам) as ПланРентабельностиПоКонтрагентам2    
+    ,Num(Sum(ПланПродажПоКонтрагентам) / (Floor(MonthEnd(%ДатаПланаПоКонтрагентам) 
+    - MonthStart(%ДатаПланаПоКонтрагентам)) + 1)) as ПланПродажДеньПоКонтрагентам2
+    ,Num(Sum(ПланОплатПоКонтрагентам) / (Floor(MonthEnd(%ДатаПланаПоКонтрагентам) 
+    - MonthStart(%ДатаПланаПоКонтрагентам)) + 1)) as ПланОплатДеньПоКонтрагентам2
+    ,Num(Sum(ПланПрибылиПоКонтрагентам) / (Floor(MonthEnd(%ДатаПланаПоКонтрагентам) 
+    - MonthStart(%ДатаПланаПоКонтрагентам)) + 1)) as ПланПрибылиДеньПоКонтрагентам2
+    ,Avg(ПланРентабельностиПоКонтрагентам) as ПланРентабельностиДеньПоКонтрагентам2
+RESIDENT ПланПродажПоКонтрагентам
+GROUP BY %ДатаПланаПоКонтрагентам, %МесяцГодПланаПоКонтрагентам, ВремМенКонт, %МенеджерПланаПоКонтрагентам, %МесяцГодМенеджер2
+ORDER BY %ДатаПланаПоКонтрагентам, %МенеджерПланаПоКонтрагентам;
+
+//CALL savetxt('ГрупПланКонт', 'ПланПродаж22.csv');
+
+CONCATENATE (ПланПродаж)
+LOAD
+    %ДатаПланаПоКонтрагентам2 as %ДатаПлана
+    ,%МесяцГодПланаПоКонтрагентам2 as %МесяцГодПлана
+    ,ВремМенКонт2 as ВремМен
+    ,%МенеджерПланаПоКонтрагентам2 as %МенеджерПлана
+    ,%МесяцГодМенеджер3 as %МесяцГодМенеджер
+    ,ПланПродажПоКонтрагентам2 as ПланПродаж
+	,ПланОплатПоКонтрагентам2 as ПланОплат
+    ,ПланПрибылиПоКонтрагентам2 as ПланПрибыли
+    ,ПланРентабельностиПоКонтрагентам2 as ПланРентабельности
+    ,ПланПродажДеньПоКонтрагентам2 as ПланПродажДень
+    ,ПланОплатДеньПоКонтрагентам2 as ПланОплатДень
+    ,ПланПрибылиДеньПоКонтрагентам2 as ПланПрибылиДень
+    ,ПланРентабельностиДеньПоКонтрагентам2 as ПланРентабельностиДень
+RESIDENT ГрупПланКонт;
+
+DROP Table ГрупПланКонт;
+
+//CALL savetxt('ПланПродаж', 'ПланПродаж2.csv');
+
+/*
 LEFT JOIN (ПланПродаж)
 LOAD
     _IDRRef as ВремМен
@@ -59,8 +159,7 @@ LOAD
 FROM $(vBaseName).dbo._Reference77;
 
 DROP Field ВремМен From ПланПродаж;
-
-// CALL savetxt('ПланПродаж', 'ПланПродаж2.csv');
+DROP Field ВремМенКонт, %МесяцГодМенеджер2 From ПланПродажПоКонтрагентам;
 
 LEFT JOIN (ПланПродаж)
 LOAD
@@ -68,33 +167,283 @@ LOAD
     ,Num(ПланПродаж / 1.2 * ПланРентабельности) as ПланПрибыли
     ,Num(ПланПродаж / 1.2 * ПланРентабельности / Day(MonthEnd(%ДатаПлана))) as ПланПрибылиДень
 RESIDENT ПланПродаж;
+*/
 
-// CALL savetxt('ПланПродаж', 'ПланПродаж3.csv');
+//CALL savetxt('ПланПродаж', 'ПланПродаж3.csv');
 
-[ПланПродажПоКонтрагентам]:
-LOAD 
-	Floor(_Period - $(vDateOffset)) as %ДатаПланаПоКонтрагентам
-    ,MonthName(Floor(_Period - $(vDateOffset))) as %МесяцГодПланаПоКонтрагентам
-    ,Autonumber(ApplyMap('Сотрудники', _Fld10188RRef, _Fld10188RRef), 'Менеджер') as %МенеджерПланаПоКонтрагентам
-    ,AutoNumber(_Fld10189RRef, 'Контрагент') as %КонтрагентПланаПоКонтрагентам
-    ,Autonumber(MonthName(Floor(_Period - $(vDateOffset))) 
-    & '|' & Autonumber(ApplyMap('Сотрудники', _Fld10188RRef, _Fld10188RRef), 'Менеджер')
-    & '|' & AutoNumber(_Fld10189RRef, 'Контрагент'), 'МесяцГодМенеджерКонтрагент') as %МесяцГодМенеджерКонтрагент
-	,Num(_Fld10190) as ПланПродажПоКонтрагентам
-	,Num(_Fld10191) as ПланОплатПоКонтрагентам
-    ,Num(_Fld10190 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
-    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланПродажДеньПоКонтрагентам
-    ,Num(_Fld10191 / (Floor(MonthEnd(_Period - $(vDateOffset)) 
-    - MonthStart(_Period - $(vDateOffset))) + 1)) as ПланОплатДеньПоКонтрагентам
-;SQL SELECT 
-	_Period //as Период
-//	,_RecorderRRef //as Регистратор_Ссылка
-	,_Fld10188RRef //as Сотрудник_Ссылка
-	,_Fld10189RRef //as Контрагент_Ссылка
-	,_Fld10190 //as ПланПродаж
-	,_Fld10191 //as ПланОплат
-FROM $(vBaseName).dbo._InfoRg10187;
+[ВрОпл]: //Приходный где сделка - заказ
+LOAD
+    *
+    ,Num(СуммаОп * ApplyMap('УпрКурс', %ДатаОп & '_' & %ВалютаОп, 1) / ApplyMap('КурсEUR', %ДатаОп, 1)) as СуммаОпУпр
+    ,MonthName(%ДатаОп) as %МесяцГодОп
+    ,Year(%ДатаОп) & '|' & %КонтрагентОп as %ГодКонтрагентОп
+    ,MonthStart(%ДатаОп) & '|' & %КонтрагентОп as %МесяцГодКонтрагентОп
+    ,QuarterStart(%ДатаОп) & '|' & %КонтрагентОп as %КвртКонтрагентОп
+    ,RowNo() as НомерСтрокиДокументаОп
+WHERE Удал = 0;
+;
+LOAD
+    ApplyMap('ПриходныйДата', _Document183_IDRRef, Null()) as %ДатаОп
+    ,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('ЗакМен', _Fld3219_RRRef, Null()), Null()), 'Менеджер') as %МенеджерОп
+    ,Num(_Fld3221) as СуммаОп
+    ,ApplyMap('ПриходныйКонтрагент', _Document183_IDRRef, Null()) as %КонтрагентОп
+    ,ApplyMap('Валюта', ApplyMap('ПриходныйВалюта', _Document183_IDRRef, Null())) as %ВалютаОп
+    ,Autonumber(ApplyMap('ЗакПодраздел', _Fld3219_RRRef, Null()), 'Подразделение') as %ПодразделениеОп
+    ,ApplyMap('ПометкаУдаления', _Document183_IDRRef) as Удал
+;SQL SELECT
+//    _Fld10351RRef //Менеджер
+    _Fld3221 //сумма платежа
+    ,_Fld3219_RRRef //сделка
+//    ,_Fld3219_RTRef //тип сделки
+    ,_Document183_IDRRef //док
+FROM $(vBaseName).dbo._Document183_VT3216 
+WHERE _Fld3219_RTRef = 0x00000084 and _Fld3219_RRRef <> 0x00000000000000000000000000000000; //заказ покупателя  (000000C4 - реализация)
 
+//CALL savetxt('ВрОпл', 'ВрОпл.csv');
+
+[ВрОпл2]: //Приходный где сделка - заказ
+NOCONCATENATE LOAD
+    *
+    ,Num(СуммаОп * ApplyMap('УпрКурс', %ДатаОп & '_' & %ВалютаОп, 1) / ApplyMap('КурсEUR', %ДатаОп, 1)) as СуммаОпУпр
+    ,MonthName(%ДатаОп) as %МесяцГодОп
+    ,Year(%ДатаОп) & '|' & %КонтрагентОп as %ГодКонтрагентОп
+    ,MonthStart(%ДатаОп) & '|' & %КонтрагентОп as %МесяцГодКонтрагентОп
+    ,QuarterStart(%ДатаОп) & '|' & %КонтрагентОп as %КвртКонтрагентОп
+    ,RowNo() as НомерСтрокиДокументаОп
+WHERE Удал2 = 0;
+;
+NOCONCATENATE LOAD
+    ApplyMap('ПриходныйДата', _Document183_IDRRef, Null()) as %ДатаОп
+    ,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('ЗакМен', ApplyMap('СчетЗаказ', ApplyMap('РеализацияСчет', _Fld3219_RRRef, Null()), Null()), Null()), Null()), 'Менеджер') as %МенеджерОп
+    ,Autonumber(ApplyMap('ЗакПодраздел', ApplyMap('СчетЗаказ', ApplyMap('РеализацияСчет', _Fld3219_RRRef, Null()), Null()), Null()), 'Подразделение') as %ПодразделениеОп
+    ,Num(_Fld3221) as СуммаОп
+    ,ApplyMap('ПриходныйКонтрагент', _Document183_IDRRef, Null()) as %КонтрагентОп
+    ,ApplyMap('Валюта', ApplyMap('ПриходныйВалюта', _Document183_IDRRef, Null())) as %ВалютаОп
+    ,ApplyMap('ПометкаУдаления', _Document183_IDRRef) as Удал2
+;SQL SELECT
+//    _Fld10351RRef //Менеджер
+    _Fld3221 //сумма платежа
+    ,_Fld3219_RRRef //сделка
+//    ,_Fld3219_RTRef //тип сделки
+    ,_Document183_IDRRef //док
+FROM $(vBaseName).dbo._Document183_VT3216 
+WHERE _Fld3219_RTRef = 0x000000C4  and _Fld3219_RRRef <> 0x00000000000000000000000000000000;
+
+CONCATENATE (ВрОпл)
+LOAD
+    *
+RESIDENT ВрОпл2;
+
+DROP Table ВрОпл2;
+
+[ВрОпл3]: //Приходный где сделка - заказ
+NOCONCATENATE LOAD
+    *
+    ,Num(СуммаОп * ApplyMap('УпрКурс', %ДатаОп & '_' & %ВалютаОп, 1) / ApplyMap('КурсEUR', %ДатаОп, 1)) as СуммаОпУпр
+    ,MonthName(%ДатаОп) as %МесяцГодОп
+    ,Year(%ДатаОп) & '|' & %КонтрагентОп as %ГодКонтрагентОп
+    ,MonthStart(%ДатаОп) & '|' & %КонтрагентОп as %МесяцГодКонтрагентОп
+    ,QuarterStart(%ДатаОп) & '|' & %КонтрагентОп as %КвртКонтрагентОп
+    ,RowNo() as НомерСтрокиДокументаОп
+WHERE Удал3 = 0;
+;
+NOCONCATENATE LOAD
+    ApplyMap('ПриходныйДата', _Document183_IDRRef, Null()) as %ДатаОп
+    ,Autonumber(
+        ApplyMap('ПользовательСотрудник'
+            , _Fld10351RRef
+        , ApplyMap('ПользовательСотрудник'
+            , ApplyMap('КонтрагентПользователь'
+                , ApplyMap('ПриходныйКонтрагент', _Document183_IDRRef, Null())
+            , Null())
+        , Null())
+        )
+    , 'Менеджер') as %МенеджерОп
+    ,Autonumber(
+        ApplyMap('СотрудникПодраздел'
+            , ApplyMap('ПользовательСотрудник'
+                , _Fld10351RRef
+            , ApplyMap('СотрудникПодраздел'
+                , ApplyMap('ПользовательСотрудник'
+                    , ApplyMap('КонтрагентПользователь'
+                        , ApplyMap('ПриходныйКонтрагент', _Document183_IDRRef, Null())
+                    , Null())
+                , Null())
+            , Null())
+            )
+        , Null())
+    , 'Подразделение') as %ПодразделениеОп
+    //,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('КонтрагентПользователь', ApplyMap('ПриходныйКонтрагент', _Document183_IDRRef, Null()), Null()), Null()), 'Менеджер') as %МенеджерОп
+    //,Autonumber(ApplyMap('ПользовательПодразделение', ApplyMap('КонтрагентПользователь', ApplyMap('ПриходныйКонтрагент', _Document183_IDRRef, Null()), Null()), Null()), 'Подразделение') as %ПодразделениеОп
+    ,Num(_Fld3221) as СуммаОп
+    ,ApplyMap('ПриходныйКонтрагент', _Document183_IDRRef, Null()) as %КонтрагентОп
+    ,ApplyMap('Валюта', ApplyMap('ПриходныйВалюта', _Document183_IDRRef, Null())) as %ВалютаОп
+    ,ApplyMap('ПометкаУдаления', _Document183_IDRRef) as Удал3
+;SQL SELECT
+    _Fld10351RRef //Менеджер
+    ,_Fld3221 //сумма платежа
+//    ,_Fld3219_RRRef //сделка
+//    ,_Fld3219_RTRef //тип сделки
+    ,_Document183_IDRRef //док
+FROM $(vBaseName).dbo._Document183_VT3216 
+WHERE _Fld3219_RRRef = 0x00000000000000000000000000000000;
+
+CONCATENATE (ВрОпл)
+LOAD
+    *
+RESIDENT ВрОпл3;
+
+DROP Table ВрОпл3;
+
+//CALL savetxt('ВрОпл', 'ВрОпл31.csv');
+
+[ВрОпл4]: //Приходный где сделка - заказ
+NOCONCATENATE LOAD
+    *
+    ,Num(СуммаОп * ApplyMap('УпрКурс', %ДатаОп & '_' & %ВалютаОп, 1) / ApplyMap('КурсEUR', %ДатаОп, 1)) as СуммаОпУпр
+    ,MonthName(%ДатаОп) as %МесяцГодОп
+    ,Year(%ДатаОп) & '|' & %КонтрагентОп as %ГодКонтрагентОп
+    ,MonthStart(%ДатаОп) & '|' & %КонтрагентОп as %МесяцГодКонтрагентОп
+    ,QuarterStart(%ДатаОп) & '|' & %КонтрагентОп as %КвртКонтрагентОп
+    ,RowNo() as НомерСтрокиДокументаОп
+WHERE Удал4 = 0;
+;
+NOCONCATENATE LOAD
+    ApplyMap('ПриходныйДата', _Document127_IDRRef, Null()) as %ДатаОп
+    ,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('ЗакМен', _Fld2012_RRRef, Null()), Null()), 'Менеджер') as %МенеджерОп
+    // ,_Fld2012_RRRef
+    // ,ApplyMap('ЗакМен', _Fld2012_RRRef) as J
+    // ,ApplyMap('ПользовательСотрудник', ApplyMap('ЗакМен', _Fld2012_RRRef)) as JJ
+    ,Num(_Fld2006) as СуммаОп
+//    ,ApplyMap('ПриходныйКонтрагент', _Document127_IDRRef, Null()) as %КонтрагентОп
+    ,_Fld2010RRef as %КонтрагентОп
+    ,ApplyMap('Валюта', ApplyMap('ПриходныйВалюта', _Document127_IDRRef, Null())) as %ВалютаОп
+    ,Autonumber(ApplyMap('ЗакПодраздел', _Fld2012_RRRef, Null()), 'Подразделение') as %ПодразделениеОп
+    ,ApplyMap('ПометкаУдаления', _Document127_IDRRef) as Удал4
+;SQL SELECT
+//    _Fld10351RRef //Менеджер
+    _Fld2006 //сумма платежа
+    ,_Fld2012_RRRef //сделка
+    ,_Fld2010RRef
+//    ,_Fld3219_RTRef //тип сделки
+    ,_Document127_IDRRef //док
+FROM $(vBaseName).dbo._Document127_VT2002 
+WHERE _Fld2012_RTRef = 0x00000084 and _Fld2012_RRRef <> 0x00000000000000000000000000000000 and _Fld2006 <> 0;
+
+//CALL savetxt('ВрОпл4', 'ВрОпл4.csv');
+
+CONCATENATE (ВрОпл)
+LOAD
+    *
+RESIDENT ВрОпл4;
+
+DROP Table ВрОпл4;
+
+//CALL savetxt('ВрОпл', 'ВрОпл41.csv');
+
+[ВрОпл5]: //Приходный где сделка - заказ
+NOCONCATENATE LOAD
+    *
+    ,Num(СуммаОп * ApplyMap('УпрКурс', %ДатаОп & '_' & %ВалютаОп, 1) / ApplyMap('КурсEUR', %ДатаОп, 1)) as СуммаОпУпр
+    ,MonthName(%ДатаОп) as %МесяцГодОп
+    ,Year(%ДатаОп) & '|' & %КонтрагентОп as %ГодКонтрагентОп
+    ,MonthStart(%ДатаОп) & '|' & %КонтрагентОп as %МесяцГодКонтрагентОп
+    ,QuarterStart(%ДатаОп) & '|' & %КонтрагентОп as %КвртКонтрагентОп
+    ,RowNo() as НомерСтрокиДокументаОп
+WHERE Удал5 = 0;
+;
+NOCONCATENATE LOAD
+    ApplyMap('ПриходныйДата', _Document127_IDRRef, Null()) as %ДатаОп
+    ,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('ЗакМен', ApplyMap('СчетЗаказ', ApplyMap('РеализацияСчет', _Fld2012_RRRef, Null()), Null()), Null()), Null()),'Менеджер') as %МенеджерОп
+    ,Num(_Fld2006) as СуммаОп
+//    ,ApplyMap('ПриходныйКонтрагент', _Document127_IDRRef, Null()) as %КонтрагентОп
+    ,_Fld2010RRef as %КонтрагентОп
+    ,ApplyMap('Валюта', ApplyMap('ПриходныйВалюта', _Document127_IDRRef, Null())) as %ВалютаОп
+    ,Autonumber(ApplyMap('ЗакПодраздел', ApplyMap('СчетЗаказ', ApplyMap('РеализацияСчет', _Fld2012_RRRef, Null()), Null()), Null()), 'Подразделение') as %ПодразделениеОп
+    ,ApplyMap('ПометкаУдаления', _Document127_IDRRef) as Удал5
+;SQL SELECT
+//    _Fld10351RRef //Менеджер
+    _Fld2006 //сумма платежа
+    ,_Fld2012_RRRef //сделка
+    ,_Fld2010RRef
+//    ,_Fld3219_RTRef //тип сделки
+    ,_Document127_IDRRef //док
+FROM $(vBaseName).dbo._Document127_VT2002 
+WHERE _Fld2012_RTRef = 0x000000C4 and _Fld2012_RRRef <> 0x00000000000000000000000000000000 and _Fld2006 <> 0;
+
+CONCATENATE (ВрОпл)
+LOAD
+    *
+RESIDENT ВрОпл5;
+
+DROP Table ВрОпл5;
+
+[ВрОпл6]: //Приходный где сделка - заказ
+NOCONCATENATE LOAD
+    *
+    ,Num(СуммаОп * ApplyMap('УпрКурс', %ДатаОп & '_' & %ВалютаОп, 1) / ApplyMap('КурсEUR', %ДатаОп, 1)) as СуммаОпУпр
+    ,MonthName(%ДатаОп) as %МесяцГодОп
+    ,Year(%ДатаОп) & '|' & %КонтрагентОп as %ГодКонтрагентОп
+    ,MonthStart(%ДатаОп) & '|' & %КонтрагентОп as %МесяцГодКонтрагентОп
+    ,QuarterStart(%ДатаОп) & '|' & %КонтрагентОп as %КвртКонтрагентОп
+    ,RowNo() as НомерСтрокиДокументаОп
+WHERE Удал6 = 0;
+;
+NOCONCATENATE LOAD
+    ApplyMap('ПриходныйДата', _Document127_IDRRef, Null()) as %ДатаОп
+    //,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('КонтрагентПользователь', _Fld2010RRef, Null()), Null()), 'Менеджер') as %МенеджерОп
+    //,Autonumber(ApplyMap('ПользовательПодразделение', ApplyMap('КонтрагентПользователь', _Fld2010RRef, Null()), Null()), 'Подразделение') as %ПодразделениеОп
+    // ,Autonumber(ApplyMap('ПользовательСотрудник', _Fld10349RRef, Null()), 'Менеджер') as %МенеджерОп
+    // ,Autonumber(ApplyMap('ПользовательПодразделение', _Fld10349RRef, Null()), 'Подразделение') as %ПодразделениеОп
+    ,Autonumber(
+        ApplyMap('ПользовательСотрудник'
+            , _Fld10349RRef
+        , ApplyMap('ПользовательСотрудник'
+            , ApplyMap('КонтрагентПользователь'
+                , ApplyMap('ПриходныйКонтрагент', _Fld2010RRef, Null())
+            , Null())
+        , Null())
+        )
+    , 'Менеджер') as %МенеджерОп
+    ,Autonumber(
+        ApplyMap('СотрудникПодраздел'
+            , ApplyMap('ПользовательСотрудник'
+                , _Fld10349RRef
+            , ApplyMap('СотрудникПодраздел'
+                , ApplyMap('ПользовательСотрудник'
+                    , ApplyMap('КонтрагентПользователь'
+                        , ApplyMap('ПриходныйКонтрагент', _Fld2010RRef, Null())
+                    , Null())
+                , Null())
+            , Null())
+            )
+        , Null())
+    , 'Подразделение') as %ПодразделениеОп
+    ,Num(_Fld2006) as СуммаОп
+//    ,ApplyMap('ПриходныйКонтрагент', _Document127_IDRRef, Null()) as %КонтрагентОп
+    ,_Fld2010RRef as %КонтрагентОп
+    ,ApplyMap('Валюта', ApplyMap('ПриходныйВалюта', _Document127_IDRRef, Null())) as %ВалютаОп
+    ,ApplyMap('ПометкаУдаления', _Document127_IDRRef) as Удал6
+;SQL SELECT
+    _Fld10349RRef //Менеджер
+    ,_Fld2006 //сумма платежа
+    ,_Fld2010RRef
+//    ,_Fld3219_RRRef //сделка
+//    ,_Fld3219_RTRef //тип сделки
+    ,_Document127_IDRRef //док
+FROM $(vBaseName).dbo._Document127_VT2002 
+WHERE _Fld2012_RRRef = 0x00000000000000000000000000000000 and _Fld2006 <> 0;
+
+CONCATENATE (ВрОпл)
+LOAD
+    *
+RESIDENT ВрОпл6;
+
+DROP Table ВрОпл6;
+
+CALL savetxt('ВрОпл', 'ВрОпл.csv');
+
+/*
 [ВрОпл]:
 LOAD
     Floor(_Period - $(vDateOffset)) as %ДатаОп
@@ -108,9 +457,11 @@ LOAD
     _Period // as Период
     ,_RecordKind // as ВидДвижения
     ,_Fld4790RRef // as Контрагент
+//    ,_Fld4789_RRRef // Сделка
     ,_Active
 FROM $(vBaseName).dbo._AccumRg4787 
 WHERE _Active = 1 and _RecordKind = 1 and (_RecorderTRef IN (0x000000B7, 0x0000007F));
+*/
 
 [ОплГод]:
 MAPPING LOAD
@@ -136,15 +487,53 @@ RESIDENT ВрОпл
 GROUP BY %КонтрагентОп
 ORDER BY %ДатаОп;
 
+[Оплаты]:
+LOAD
+    *
+    ,Autonumber(%МесяцГодОплаты & '|' & %МенеджерОплаты, 'МесяцГодМенеджер') as %МесяцГодМенеджерОплаты
+    ,Autonumber(%МесяцГодОплаты & '|' & %МенеджерОплаты & '|' & %КонтрагентОплаты, 'МесяцГодМенеджерКонтрагент') as %МесяцГодМенеджерКонтрагентОплаты
+    ,Autonumber(%МесяцГодОплаты & '|' & %МенеджерОплаты & '|' & %КонтрагентОплаты & '|' & %ПодразделениеОплаты, 'МесяцГодМенеджерКонтрагентПодразд') as %МесяцГодМенеджерКонтрОплатыПодразд
+;
+LOAD
+    %ДатаОп as %ДатаОплаты
+    ,AutoNumber(%КонтрагентОп, 'Контрагент') as %КонтрагентОплаты
+    ,%МесяцГодОп as %МесяцГодОплаты
+    ,Autonumber(%ДатаОп & '|' & AutoNumber(%КонтрагентОп, 'Контрагент'), 'ДатаКонтрагент') as %ДатаКонтрагентОплаты
+    ,%ПодразделениеОп as %ПодразделениеОплаты
+    //,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('ЗакМен', ApplyMap('СделкаЗаказ', _Fld4789_RRRef, Null()), Null()), Null()), 'Менеджер') as %МенеджерОплаты
+    ,%МенеджерОп as %МенеджерОплаты
+    ,RowNo() as НомерСтрокиДокументаОплаты
+    ,СуммаОп as СуммаОплаты
+    ,СуммаОпУпр as СуммаОплатыУпр
+    ,ApplyMap('ОплГод', %ГодКонтрагентОп, 0) as НовыйВГоду
+    ,ApplyMap('ОплМес', %МесяцГодКонтрагентОп, 0) as НовыйВМесяце
+    ,ApplyMap('ОплКврт', %КвртКонтрагентОп, 0) as НовыйВКвартале
+RESIDENT ВрОпл;
+
 DROP Table ВрОпл;
 
+CALL savetxt('Оплаты', 'Оплаты.csv');
+
+/*
 [Оплаты]:
+LOAD
+    *
+    ,Autonumber(%МесяцГодОплаты & '|' & %МенеджерОплаты, 'МесяцГодМенеджер') as %МесяцГодМенеджерОплаты
+    ,Autonumber(%МесяцГодОплаты 
+    & '|' & %МенеджерОплаты
+    & '|' & %КонтрагентОплаты, 'МесяцГодМенеджерКонтрагент') as %МесяцГодМенеджерКонтрагентОплаты
+    ,Autonumber(%МесяцГодОплаты 
+    & '|' & %МенеджерОплаты
+    & '|' & %КонтрагентОплаты, 'МесяцГодМенеджерКонтрагент') as %МесяцГодМенеджерКонтрОплаты
+;
 LOAD
     Floor(_Period - $(vDateOffset)) as %ДатаОплаты
     ,AutoNumber(_Fld4790RRef, 'Контрагент') as %КонтрагентОплаты
     ,MonthName(Floor(_Period - $(vDateOffset))) as %МесяцГодОплаты
     ,Autonumber(Floor(_Period - $(vDateOffset)) & '|' 
     & AutoNumber(_Fld4790RRef, 'Контрагент'), 'ДатаКонтрагент') as %ДатаКонтрагентОплаты
+    //,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('ЗакМен', ApplyMap('СделкаЗаказ', _Fld4789_RRRef, Null()), Null()), Null()), 'Менеджер') as %МенеджерОплаты
+    ,Autonumber(ApplyMap('ПользовательСотрудник', ApplyMap('ЗакМен', ApplyMap('СчетЗаказ', ApplyMap('РеализацияСчет', _Fld4789_RRRef, Null()), Null()), Null()), Null()), 'Менеджер') as %МенеджерОплаты
     ,RowNo() as НомерСтрокиДокументаОплаты
     ,Num(_Fld4791) as СуммаОплаты
     ,Num(_Fld4792) as СуммаОплатыУпр
@@ -166,3 +555,4 @@ LOAD
 FROM $(vBaseName).dbo._AccumRg4787 
 WHERE _Active = 1 and _RecordKind = 1 and (_RecorderTRef IN (0x000000B7, 0x0000007F));
 //Только приход денег (в 1с это расход) по Приходному ордеру, или выписке.
+*/

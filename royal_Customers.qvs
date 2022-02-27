@@ -5,12 +5,7 @@
 [Собственные]:
 MAPPING LOAD * INLINE [
 a, b
-8BF8F0FEE287E03311E395869AD70B54, 1  
-80D39C5C8E4F724811E80D8163EA7323, 1
-80D29C5C8E4F724811E7F614AD8629BE, 1
-8C73E815AF6BB79111E3D4E5E37380B3, 1
-B68494DE801C3D4311E3A4F8E75AFE83, 1
-80D59C5C8E4F724811E98B8D44DC9FFD, 1
+80DB9C5C8E4F724811EB1F4E9F9F0B5F, 1
 ];
 
 /*
@@ -19,9 +14,17 @@ B68494DE801C3D4311E3A4F8E75AFE83, 1
 //80d29c5c8e4f724811e7f614ad8629be Услуги
 //8c73e815af6bb79111e3d4e5e37380b3 Исполнительные д-ты
 //b68494de801c3d4311e3a4f8e75afe83 Займодавцы
-//80d59c5c8e4f724811e98b8d44dc9ffd Остальные контрагенты
+//80d59c5c8e4f724811e98b8d44dc9ffd Поставщики.Услуги.Остальные контрагенты
+//80DB9C5C8E4F724811EB1F4E9F9F0B5F Собственные
 //    5      4    3    1      2
 //cfbc0e2d-f786-11de-b1bc-001eec49bf6b
+
+8BF8F0FEE287E03311E395869AD70B54, 1  
+80D39C5C8E4F724811E80D8163EA7323, 1
+80D29C5C8E4F724811E7F614AD8629BE, 1
+8C73E815AF6BB79111E3D4E5E37380B3, 1
+B68494DE801C3D4311E3A4F8E75AFE83, 1
+80D59C5C8E4F724811E98B8D44DC9FFD, 1
 */
 
 [ЮрФиз]:
@@ -40,8 +43,8 @@ LOAD
     ,AutoNumber(_ParentIDRRef, 'Родитель') as %Родитель
     ,Floor(ApplyMap('Собственные', _ParentIDRRef, 0)) as Собственные
     ,_Description as Контрагент
-    ,AutoNumber(_Fld706RRef, 'Менеджер') as %ОсновнойМенеджер
-    ,AutoNumber(_Fld686RRef, 'Менеджер') as %ВторойМенеджер
+    ,AutoNumber(ApplyMap('ПользовательСотрудник', _Fld706RRef, Null()), 'Менеджер') as %ОсновнойМенеджер
+    ,AutoNumber(ApplyMap('ПользовательСотрудник', _Fld686RRef, Null()), 'Менеджер') as %ВторойМенеджер
     ,AutoNumber(_Fld687RRef, 'Контрагент') as %ГоловнойКонтрагент
     ,ApplyMap('ТипКонтр', _Fld713RRef, 'Не указан') as [Тип контрагента]
     ,Date(Floor(_Fld719 - $(vDateOffset))) as [Дата создания]

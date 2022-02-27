@@ -1,6 +1,7 @@
-﻿TRACE ***************************************************************** 
-       MAP таблицы
-      *****************************************************************;
+﻿TRACE
+************************************************************
+    MAP таблицы
+************************************************************;
 
 [СуммаРеалНом]:
 MAPPING
@@ -148,3 +149,153 @@ LOAD DISTINCT
 RESIDENT ПрОрд;
 
 DROP Table ПрОрд;
+
+[ЗакМен]:
+MAPPING
+LOAD DISTINCT
+    *
+;SQL SELECT
+	_IDRRef
+	,_Fld10144RRef
+FROM $(vBaseName).dbo._Document132;
+
+[ЗакПодраздел]:
+MAPPING
+LOAD DISTINCT
+    *
+;SQL SELECT
+	_IDRRef
+	,_Fld10263RRef
+FROM $(vBaseName).dbo._Document132;
+
+[ПользовательСотрудник]:
+MAPPING
+LOAD DISTINCT
+    *
+;SQL SELECT
+	_IDRRef
+	,_Fld926RRef
+FROM $(vBaseName).dbo._Reference77;
+
+[СотрудникПодраздел]:
+MAPPING
+LOAD DISTINCT
+    *
+;SQL SELECT
+	_IDRRef
+	,_Fld1085RRef
+FROM $(vBaseName).dbo._Reference85;
+
+[РеализацияСчет]:
+MAPPING
+LOAD DISTINCT
+    *
+;SQL SELECT
+	_IDRRef
+	,_Fld3704_RRRef
+FROM $(vBaseName).dbo._Document196;
+
+[СчетЗаказ]:
+MAPPING
+LOAD DISTINCT
+    *
+;SQL SELECT
+	_IDRRef
+	,_Fld3981RRef
+FROM $(vBaseName).dbo._Document205;
+
+[ПриходныйДата]:
+MAPPING
+LOAD DISTINCT
+    _IDRRef as Приход1
+    ,Floor(_Date_Time - $(vDateOffset)) as Dat1
+;SQL SELECT
+    _IDRRef
+    ,_Date_Time
+FROM $(vBaseName).dbo._Document183;
+
+MAPPING
+LOAD DISTINCT
+    _IDRRef as Приход1
+    ,Floor(_Date_Time - $(vDateOffset)) as Dat1
+;SQL SELECT
+    _IDRRef
+    ,_Date_Time
+FROM $(vBaseName).dbo._Document127;
+
+[ПриходныйКонтрагент]:
+MAPPING
+LOAD DISTINCT
+    _IDRRef as Приход2
+    ,_Fld1552RRef as Конт2
+;SQL SELECT
+    _IDRRef
+    ,_Fld1552RRef
+FROM $(vBaseName).dbo._Document183;
+
+MAPPING
+LOAD DISTINCT
+    _Document127_IDRRef as Приход2
+    ,_Fld2010RRef as Конт2
+;SQL SELECT
+    _Document127_IDRRef
+    ,_Fld2010RRef
+FROM $(vBaseName).dbo._Document127_VT2002;
+
+[ПриходныйВалюта]:
+MAPPING
+LOAD DISTINCT
+    _IDRRef as Приход3
+    ,_Fld1549RRef as Вал3
+;SQL SELECT
+    _IDRRef
+    ,_Fld1549RRef
+FROM $(vBaseName).dbo._Document183;
+
+MAPPING
+LOAD DISTINCT
+    _IDRRef as Приход3
+    ,_Fld1549RRef as Вал3
+;SQL SELECT
+    _IDRRef
+    ,_Fld1549RRef
+FROM $(vBaseName).dbo._Document127;
+
+[ПользовательПодразделение]:
+MAPPING
+LOAD DISTINCT
+    _IDRRef as пол
+    ,_Fld925RRef as подраз
+;SQL SELECT
+    _IDRRef
+    ,_Fld925RRef
+FROM $(vBaseName).dbo._Reference77;
+
+[КонтрагентПользователь]:
+MAPPING
+LOAD DISTINCT
+    _IDRRef as конт3
+    ,_Fld706RRef as пол5
+;SQL SELECT
+    _IDRRef
+    ,_Fld706RRef
+FROM $(vBaseName).dbo._Reference67;
+
+[ПометкаУдаления]:
+MAPPING
+LOAD DISTINCT
+    _IDRRef as Вып
+    ,_Marked as Уд1
+;SQL SELECT
+    _IDRRef
+    ,_Marked
+FROM $(vBaseName).dbo._Document127;
+
+MAPPING
+LOAD DISTINCT
+    _IDRRef as Вып
+    ,_Marked as Уд1
+;SQL SELECT
+    _IDRRef
+    ,_Marked
+FROM $(vBaseName).dbo._Document183;
